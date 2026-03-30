@@ -64,3 +64,73 @@ git commit -m "MC-3: Add Docker Compose setup with frontend, backend, Ollama, SD
 - **Pull model:** `ollama pull llama3`
 - **Verify:** `curl http://localhost:11434/api/generate -d '{"model":"llama3","prompt":"hello","stream":false}'`
 - **Note:** MLX warnings on Mac are non-fatal and can be ignored
+
+## Stable Diffusion Local Setup (Completed)
+
+This project now has a working local Stable Diffusion API at `http://localhost:7860/sdapi/v1/txt2img`.
+
+### What Was Set Up
+- Cloned `AUTOMATIC1111/stable-diffusion-webui`
+- Installed Python 3.10 and WebUI dependencies in a dedicated venv
+- Downloaded SD 1.5 model artifacts
+- Verified API health and successful `txt2img` generation with curl
+
+### Start Stable Diffusion API
+
+Use this working command:
+
+```bash
+/Users/kevinorange/stable-diffusion-webui/venv/bin/python /Users/kevinorange/stable-diffusion-webui/minimal_api.py
+```
+
+Health check:
+
+```bash
+curl http://localhost:7860/sdapi/v1/info
+```
+
+Expected response contains: `"status":"running"`
+
+### Test txt2img (curl/Postman)
+
+```bash
+curl -X POST http://localhost:7860/sdapi/v1/txt2img \
+	-H 'Content-Type: application/json' \
+	-d '{
+		"prompt":"minecraft redstone tower",
+		"steps":1,
+		"width":64,
+		"height":64,
+		"scale":7
+	}'
+```
+
+Expected response includes:
+- `"status":"success"`
+- `"image":"<base64 PNG...>"`
+
+### Troubleshooting
+
+- If you see `No module named 'diffusers'`:
+	install missing runtime packages in the SD venv:
+	```bash
+	/Users/kevinorange/stable-diffusion-webui/venv/bin/pip install diffusers transformers sentencepiece accelerate safetensors
+	```
+
+- If you see `cannot import name 'SiglipImageProcessor'`:
+	align package versions:
+	```bash
+	/Users/kevinorange/stable-diffusion-webui/venv/bin/pip install --upgrade "transformers==4.41.2" "diffusers==0.30.3"
+	```
+
+- If port 7860 is already in use:
+	```bash
+	pkill -f "/Users/kevinorange/stable-diffusion-webui/minimal_api.py"
+	```
+
+- If running from a different directory fails:
+	always use absolute paths (as shown above) to avoid cwd-related script errors.
+
+### Note On `webui.sh --api --listen`
+
+The upstream A1111 launcher path currently has repository compatibility issues in this environment. The `minimal_api.py` path above is verified working and satisfies local API generation requirements for this project.
