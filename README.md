@@ -54,3 +54,13 @@ Save everything, then commit:
 ```
 git add .
 git commit -m "MC-3: Add Docker Compose setup with frontend, backend, Ollama, SD services"
+
+## System Requirements
+
+### Ollama (Llama 3)
+- **RAM:** 8 GB minimum, 16 GB recommended
+- **Disk:** ~5 GB for Llama 3 model
+- **Install:** `brew install ollama` or download from https://ollama.com
+- **Pull model:** `ollama pull llama3`
+- **Verify:** `curl http://localhost:11434/api/generate -d '{"model":"llama3","prompt":"hello","stream":false}'`
+- **Note:** MLX warnings on Mac are non-fatal and can be ignored
