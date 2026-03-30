@@ -134,3 +134,40 @@ Expected response includes:
 ### Note On `webui.sh --api --listen`
 
 The upstream A1111 launcher path currently has repository compatibility issues in this environment. The `minimal_api.py` path above is verified working and satisfies local API generation requirements for this project.
+
+## Run Backend Tests
+
+From the backend folder:
+
+```bash
+cd /Users/kevinorange/minecraft-ai-builder/python
+```
+
+Install test dependencies (if needed):
+
+```bash
+python3 -m pip install -r requirements.txt pytest
+```
+
+Run only Stable Diffusion service tests:
+
+```bash
+python3 -m pytest -q tests/test_sd_service.py
+```
+
+Run all backend tests:
+
+```bash
+python3 -m pytest -q tests
+```
+
+Quick runtime smoke check for SD service:
+
+```bash
+python3 -c "from services.sd_service import generate_image; data=generate_image('minecraft tower',64,64); print(type(data).__name__, len(data), data[:8])"
+```
+
+Expected smoke check output:
+- `bytes`
+- non-zero length
+- PNG header: `b'\\x89PNG\\r\\n\\x1a\\n'`
