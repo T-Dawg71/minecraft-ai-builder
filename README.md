@@ -171,3 +171,117 @@ Expected smoke check output:
 - `bytes`
 - non-zero length
 - PNG header: `b'\\x89PNG\\r\\n\\x1a\\n'`
+
+## Backend API Verification (DEV-84 to DEV-88)
+
+These are the exact commands used to verify the new `/generate-image` route behavior.
+
+### 1) Run backend tests
+
+```bash
+cd /Users/kevinorange/minecraft-ai-builder/python
+/Users/kevinorange/stable-diffusion-webui/venv/bin/python -m pytest -q
+```
+
+Expected: all tests pass.
+
+### 2) Start dependencies
+
+Stable Diffusion API (required for successful image generation):
+
+```bash
+/Users/kevinorange/stable-diffusion-webui/venv/bin/python /Users/kevinorange/stable-diffusion-webui/minimal_api.py
+```
+
+Ollama (optional, only needed for `/refine-prompt`):
+
+```bash
+ollama serve
+```
+
+### 3) Start backend API
+
+Use the known working interpreter and explicit app dir:
+
+```bash
+cd /Users/kevinorange/minecraft-ai-builder/python
+/Users/kevinorange/stable-diffusion-webui/venv/bin/python -m uvicorn services.main:app --app-dir /Users/kevinorange/minecraft-ai-builder/python --host 127.0.0.1 --port 8000
+```
+
+### 4) Verify health endpoint
+
+```bash
+curl -sS -o /tmp/health.json -w '%{http_code}\n' http://127.0.0.1:8000/health && echo '---' && cat /tmp/health.json
+```
+
+Expected:
+- HTTP `200`
+- `{"status":"ok"}`
+
+### 5) Verify image generation success
+
+```bash
+curl -sS -o /tmp/gen_ok.json -w '%{http_code}\n' \
+	-X POST http://127.0.0.1:8000/generate-image \
+	-H 'Content-Type: application/json' \
+	-d '{"prompt":"minecraft house","width":64,"height":64}' && \
+echo '---' && \
+python3 - <<'PY'
+import json
+with open('/tmp/gen_ok.json') as f:
+		d = json.load(f)
+print('has_image=', 'image' in d, 'len=', len(d.get('image', '')))
+PY
+```
+
+Expected:
+- HTTP `200`
+- `has_image=True`
+- non-zero base64 length
+
+### 6) Verify request validation errors (Pydantic)
+
+Invalid width:
+
+```bash
+curl -sS -o /tmp/gen_bad_width.json -w '%{http_code}\n' \
+	-X POST http://127.0.0.1:8000/generate-image \
+	-H 'Content-Type: application/json' \
+	-d '{"prompt":"minecraft house","width":0,"height":64}' && \
+echo '---' && cat /tmp/gen_bad_width.json
+```
+
+Missing prompt:
+
+```bash
+curl -sS -o /tmp/gen_missing_prompt.json -w '%{http_code}\n' \
+	-X POST http://127.0.0.1:8000/generate-image \
+	-H 'Content-Type: application/json' \
+	-d '{"width":64,"height":64}' && \
+echo '---' && cat /tmp/gen_missing_prompt.json
+```
+
+Expected both calls: HTTP `422`.
+
+### 7) Verify mapped `503` error path for SD unavailable
+
+Start backend with an intentionally unreachable SD host:
+
+```bash
+cd /Users/kevinorange/minecraft-ai-builder/python
+SD_API_HOST=http://127.0.0.1:7999 /Users/kevinorange/stable-diffusion-webui/venv/bin/python -m uvicorn services.main:app --app-dir /Users/kevinorange/minecraft-ai-builder/python --host 127.0.0.1 --port 8000
+```
+
+Then call:
+
+```bash
+curl -sS -o /tmp/gen_sd_down.json -w '%{http_code}\n' \
+	-X POST http://127.0.0.1:8000/generate-image \
+	-H 'Content-Type: application/json' \
+	-d '{"prompt":"minecraft house","width":64,"height":64}' && \
+echo '---' && cat /tmp/gen_sd_down.json
+```
+
+Expected:
+- HTTP `503`
+- error detail indicating Stable Diffusion API is unreachable
