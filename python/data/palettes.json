@@ -1,0 +1,42 @@
+{
+  "full": {
+    "name": "Full Palette",
+    "description": "All available blocks",
+    "categories": ["wool", "concrete", "concrete_powder", "terracotta", "glazed_terracotta", "stone", "nether", "wood", "natural", "mineral", "misc"]
+  },
+  "survival": {
+    "name": "Survival Friendly",
+    "description": "Blocks easily obtainable in survival mode",
+    "categories": ["wool", "concrete", "terracotta", "stone", "wood", "natural"]
+  },
+  "wool": {
+    "name": "Wool Only",
+    "description": "16 wool colors — simplest palette",
+    "categories": ["wool"]
+  },
+  "concrete": {
+    "name": "Concrete Only",
+    "description": "16 concrete colors — most vibrant palette",
+    "categories": ["concrete"]
+  },
+  "terracotta": {
+    "name": "Terracotta Only",
+    "description": "17 terracotta colors — warm earthy tones",
+    "categories": ["terracotta"]
+  },
+  "natural": {
+    "name": "Natural Blocks",
+    "description": "Wood, stone, dirt, sand — organic look",
+    "categories": ["wood", "stone", "natural"]
+  },
+  "nether": {
+    "name": "Nether Blocks",
+    "description": "Dark and red tones from the Nether",
+    "categories": ["nether"]
+  },
+  "vibrant": {
+    "name": "Vibrant Colors",
+    "description": "Concrete + wool + minerals for maximum color range",
+    "categories": ["concrete", "wool", "mineral"]
+  }
+}
