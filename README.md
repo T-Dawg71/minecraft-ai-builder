@@ -285,3 +285,41 @@ echo '---' && cat /tmp/gen_sd_down.json
 Expected:
 - HTTP `503`
 - error detail indicating Stable Diffusion API is unreachable
+
+## Running Tests
+
+### All Backend Tests
+```bash
+cd python
+source venv/bin/activate
+python -m pytest tests/ -v
+```
+
+### Individual Test Files
+```bash
+# Ollama prompt engineering tests
+python -m pytest tests/test_ollama_service.py -v
+
+# Color matching algorithm tests
+python -m pytest tests/test_color_matcher.py -v
+```
+
+### Manual Service Tests
+
+**Test prompt refinement (requires Ollama running):**
+```bash
+cd python
+python -m services.ollama_service
+```
+
+**Test color matching and benchmark:**
+```bash
+cd python
+python -m services.color_matcher
+```
+
+**Validate block color database:**
+```bash
+cd python
+python -m utils.validate_blocks
+```
