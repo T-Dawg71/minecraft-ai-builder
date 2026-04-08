@@ -34,6 +34,10 @@ export function useImageGeneration() {
   const setPartial = (patch: Partial<GenerationState>) =>
     setState((prev) => ({ ...prev, ...patch }));
 
+  const setInput = useCallback((val: string) => {
+    setPartial({ input: val });
+  }, []);
+
   const convertToBlocks = useCallback(
     async (imageBase64: string, settings: ConversionSettingsData) => {
       setPartial({ isConverting: true, step: "converting" });
@@ -60,25 +64,20 @@ export function useImageGeneration() {
 
         const data = await res.json();
 
-        // Build the colors map from the grid + block_colors
         const colorsMap: { [blockId: string]: number[] } = {};
         if (data.grid) {
-          // Fetch block colors to build the color lookup
           for (const row of data.grid) {
             for (const blockId of row) {
               if (!colorsMap[blockId]) {
-                // We'll populate this from palette_summary or a separate call
-                colorsMap[blockId] = [128, 128, 128]; // placeholder
+                colorsMap[blockId] = [128, 128, 128];
               }
             }
           }
         }
 
-        // If the backend returns colors, use them; otherwise fetch from block_colors endpoint
         if (data.colors) {
           Object.assign(colorsMap, data.colors);
         } else {
-          // Fetch the block colors
           try {
             const colorsRes = await fetch("/api/block-colors");
             if (colorsRes.ok) {
@@ -90,7 +89,7 @@ export function useImageGeneration() {
               }
             }
           } catch {
-            // Fall back to placeholders — non-critical
+            // Fall back to placeholders
           }
         }
 
@@ -128,7 +127,7 @@ export function useImageGeneration() {
         const res = await fetch("/api/refine-prompt", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: input }),
+          body: JSON.stringify({ description: input }),
         });
         if (!res.ok) throw new Error(`Refine failed: ${res.status}`);
         const data = await res.json();
@@ -191,5 +190,5 @@ export function useImageGeneration() {
 
   const reset = useCallback(() => setState(INITIAL), []);
 
-  return { ...state, run, retry, reset, reconvert, updateSettings };
+  return { ...state, run, retry, reset, reconvert, updateSettings, setInput };
 }

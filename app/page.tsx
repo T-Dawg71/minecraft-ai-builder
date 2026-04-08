@@ -22,6 +22,7 @@ export default function Home() {
     reset,
     reconvert,
     updateSettings,
+    setInput,
   } = useImageGeneration();
 
   return (
@@ -35,6 +36,7 @@ export default function Home() {
         <PromptInput
           value={input}
           onChange={(val) => {
+            setInput(val);
             if (!val) reset();
           }}
           onSubmit={() => run(input, settings)}
