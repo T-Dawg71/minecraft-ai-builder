@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { BlockCell } from "@/components/BlockPreview";
 
 // ── Palette definitions (DEV-175) ─────────────────────────────────────────────
 
@@ -59,31 +58,31 @@ export const PRESETS: BlockPalette[] = [
   {
     name: "Desert",
     blocks: [
-      { name: "sand",          rgb: [219, 207, 163] },
-      { name: "sandstone",     rgb: [210, 196, 148] },
+      { name: "sand",             rgb: [219, 207, 163] },
+      { name: "sandstone",        rgb: [210, 196, 148] },
       { name: "smooth_sandstone", rgb: [224, 213, 166] },
-      { name: "red_sand",      rgb: [190, 102,  33] },
-      { name: "red_sandstone", rgb: [181,  97,  31] },
-      { name: "terracotta",    rgb: [152,  94,  67] },
-      { name: "dead_bush",     rgb: [106,  75,  33] },
-      { name: "cactus",        rgb: [ 88, 119,  51] },
-      { name: "gravel",        rgb: [162, 154, 154] },
-      { name: "stone",         rgb: [125, 125, 125] },
+      { name: "red_sand",         rgb: [190, 102,  33] },
+      { name: "red_sandstone",    rgb: [181,  97,  31] },
+      { name: "terracotta",       rgb: [152,  94,  67] },
+      { name: "dead_bush",        rgb: [106,  75,  33] },
+      { name: "cactus",           rgb: [ 88, 119,  51] },
+      { name: "gravel",           rgb: [162, 154, 154] },
+      { name: "stone",            rgb: [125, 125, 125] },
     ],
   },
   {
     name: "Wool Rainbow",
     blocks: [
-      { name: "white_wool",    rgb: [233, 236, 236] },
-      { name: "red_wool",      rgb: [161,  41,  39] },
-      { name: "orange_wool",   rgb: [240, 118,  19] },
-      { name: "yellow_wool",   rgb: [248, 197,  39] },
-      { name: "green_wool",    rgb: [ 84, 109,  27] },
-      { name: "blue_wool",     rgb: [ 60,  68, 170] },
-      { name: "purple_wool",   rgb: [121,  42, 172] },
-      { name: "cyan_wool",     rgb: [ 22, 156, 156] },
-      { name: "pink_wool",     rgb: [237, 141, 172] },
-      { name: "black_wool",    rgb: [ 26,  22,  22] },
+      { name: "white_wool",  rgb: [233, 236, 236] },
+      { name: "red_wool",    rgb: [161,  41,  39] },
+      { name: "orange_wool", rgb: [240, 118,  19] },
+      { name: "yellow_wool", rgb: [248, 197,  39] },
+      { name: "green_wool",  rgb: [ 84, 109,  27] },
+      { name: "blue_wool",   rgb: [ 60,  68, 170] },
+      { name: "purple_wool", rgb: [121,  42, 172] },
+      { name: "cyan_wool",   rgb: [ 22, 156, 156] },
+      { name: "pink_wool",   rgb: [237, 141, 172] },
+      { name: "black_wool",  rgb: [ 26,  22,  22] },
     ],
   },
 ];
@@ -91,23 +90,22 @@ export const PRESETS: BlockPalette[] = [
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type GridSize = 32 | 64 | 128 | 256 | "custom";
-
 export type DepthMode = "flat" | "relief";
 
 export interface ConversionConfig {
   gridSize:   number;
   palette:    BlockPalette;
   dithering:  boolean;
-  brightness: number;    // -100 to +100
-  contrast:   number;    // -100 to +100
-  depth:      number;    // 1-10
+  brightness: number;   // -100 to +100
+  contrast:   number;   // -100 to +100
+  depth:      number;   // 1-10
   depthMode:  DepthMode;
 }
 
 interface ConversionSettingsProps {
-  onChange:   (config: ConversionConfig) => void;
+  onChange:    (config: ConversionConfig) => void;
   onReconvert: () => void;
-  isLoading:  boolean;
+  isLoading:   boolean;
 }
 
 // ── Default config ────────────────────────────────────────────────────────────
@@ -158,7 +156,9 @@ export default function ConversionSettings({
     <div className="flex flex-col gap-1">
       <div className="flex justify-between text-xs text-mc-stone-500">
         <span className="uppercase tracking-widest">{label}</span>
-        <span className={value !== 0 ? "text-mc-grass-700 font-bold" : ""}>{value > 0 ? `+${value}` : value}</span>
+        <span className={value !== 0 ? "text-mc-grass-700 font-bold" : ""}>
+          {value > 0 ? `+${value}` : value}
+        </span>
       </div>
       <input
         type="range" min={min} max={max} value={value}
@@ -214,7 +214,6 @@ export default function ConversionSettings({
             <option key={p.name} value={p.name}>{p.name}</option>
           ))}
         </select>
-        {/* Swatch preview */}
         <div className="flex gap-1 mt-1 flex-wrap">
           {config.palette.blocks.map(b => (
             <div
@@ -258,7 +257,9 @@ export default function ConversionSettings({
       <div className="flex flex-col gap-1">
         <div className="flex justify-between text-xs text-mc-stone-500">
           <span className="uppercase tracking-widest">Extrusion Depth</span>
-          <span className={config.depth > 1 ? "text-mc-grass-700 font-bold" : ""}>{config.depth} block{config.depth !== 1 ? "s" : ""}</span>
+          <span className={config.depth > 1 ? "text-mc-grass-700 font-bold" : ""}>
+            {config.depth} block{config.depth !== 1 ? "s" : ""}
+          </span>
         </div>
         <input
           type="range" min={1} max={10} value={config.depth}
