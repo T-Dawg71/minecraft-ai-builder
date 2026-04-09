@@ -2,6 +2,7 @@
 
 import PromptInput from "@/components/PromptInput";
 import PipelineStatus from "@/components/PipelineStatus";
+import ComparisonView from "@/components/ComparisonView";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 
 export default function Home() {
@@ -9,6 +10,7 @@ export default function Home() {
     input,
     refinedPrompt,
     imageBase64,
+    blockGrid,
     step,
     isLoading,
     error,
@@ -28,8 +30,6 @@ export default function Home() {
         <PromptInput
           value={input}
           onChange={(val) => {
-            // keep input in sync without triggering pipeline
-            // run() receives the value directly so just reset if cleared
             if (!val) reset();
           }}
           onSubmit={() => run(input)}
@@ -61,19 +61,13 @@ export default function Home() {
         </section>
       )}
 
-      {/* Image preview */}
-      {imageBase64 && (
+      {/* Comparison view — original image + block preview + stats */}
+      {blockGrid && imageBase64 && (
         <section className="w-full">
           <h2 className="text-xs font-mono text-mc-stone uppercase tracking-widest mb-2">
-            Generated Preview
+            Comparison View
           </h2>
-          <div className="border-2 border-mc-stone rounded-md overflow-hidden bg-mc-dark">
-            <img
-              src={`data:image/png;base64,${imageBase64}`}
-              alt="Generated Minecraft creation"
-              className="w-full object-contain"
-            />
-          </div>
+          <ComparisonView imageBase64={imageBase64} grid={blockGrid} />
         </section>
       )}
     </main>
