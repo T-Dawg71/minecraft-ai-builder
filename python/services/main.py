@@ -6,10 +6,17 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field
 
 from services.block_mapper import image_to_block_grid
+from services.export_utils import (
+    export_block_list_csv,
+    export_block_list_json,
+    export_structure,
+    render_preview_image,
+)
 from services.image_processor import preprocess_image
 from services.ollama_service import refine_prompt
 from services.sd_service import (
@@ -76,6 +83,23 @@ class ConvertToBlocksResponse(BaseModel):
     palette_summary: dict[str, int]
     grid: list[list[str]] | None = None
     preview_image: str | None = None
+
+
+class ExportSchematicRequest(BaseModel):
+    grid: list[list[str]] = Field(..., min_length=1)
+    format: Literal["schem", "nbt"] = "schem"
+    orientation: Literal["wall", "floor"] = "floor"
+    depth: int = Field(default=1, ge=1, le=64)
+
+
+class ExportPreviewImageRequest(BaseModel):
+    grid: list[list[str]] = Field(..., min_length=1)
+    scale: int = Field(default=24, ge=1, le=128)
+
+
+class ExportBlockListRequest(BaseModel):
+    grid: list[list[str]] = Field(..., min_length=1)
+    format: Literal["csv", "json"] = "json"
 
 
 def _decode_base64_image(image_base64: str) -> Image.Image:
@@ -202,3 +226,66 @@ async def convert_to_blocks_endpoint(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception:
         raise HTTPException(status_code=500, detail="Unexpected block conversion error")
+
+
+@app.post("/export/schematic")
+async def export_schematic_endpoint(request: ExportSchematicRequest):
+    try:
+        content = export_structure(
+            request.grid,
+            format=request.format,
+            orientation=request.orientation,
+            depth=request.depth,
+        )
+        extension = request.format
+        return Response(
+            content=content,
+            media_type="application/octet-stream",
+            headers={
+                "Content-Disposition": f'attachment; filename="minecraft-build.{extension}"',
+                "Cache-Control": "no-store",
+            },
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        raise HTTPException(status_code=500, detail="Unexpected schematic export error")
+
+
+@app.post("/export/preview-image")
+async def export_preview_image_endpoint(request: ExportPreviewImageRequest):
+    try:
+        content = render_preview_image(request.grid, scale=request.scale)
+        return Response(
+            content=content,
+            media_type="image/png",
+            headers={
+                "Content-Disposition": 'attachment; filename="minecraft-preview.png"',
+                "Cache-Control": "no-store",
+            },
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        raise HTTPException(status_code=500, detail="Unexpected preview export error")
+
+
+@app.post("/export/block-list")
+async def export_block_list_endpoint(request: ExportBlockListRequest):
+    try:
+        if request.format == "csv":
+            content = export_block_list_csv(request.grid)
+            return Response(
+                content=content,
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": 'attachment; filename="minecraft-blocks.csv"',
+                    "Cache-Control": "no-store",
+                },
+            )
+
+        return JSONResponse(export_block_list_json(request.grid), headers={"Cache-Control": "no-store"})
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        raise HTTPException(status_code=500, detail="Unexpected block list export error")
