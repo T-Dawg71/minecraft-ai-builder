@@ -1,5 +1,4 @@
 "use client";
-
 import PromptInput from "@/components/PromptInput";
 import PipelineStatus from "@/components/PipelineStatus";
 import ComparisonView from "@/components/ComparisonView";
@@ -22,6 +21,7 @@ export default function Home() {
     reset,
     reconvert,
     updateSettings,
+    setInput,
   } = useImageGeneration();
 
   return (
@@ -31,21 +31,19 @@ export default function Home() {
         <h1 className="text-3xl font-bold font-mono text-mc-green tracking-wide uppercase">
           Minecraft Creator
         </h1>
-
         <PromptInput
           value={input}
           onChange={(val) => {
+            setInput(val);
             if (!val) reset();
           }}
           onSubmit={() => run(input, settings)}
           onClear={reset}
           isLoading={isLoading}
         />
-
         {step !== "idle" && (
           <PipelineStatus step={step} errorMessage={error} onRetry={retry} />
         )}
-
         {refinedPrompt && (
           <div>
             <h2 className="text-xs font-mono text-stone-400 uppercase tracking-widest mb-1">
@@ -56,7 +54,6 @@ export default function Home() {
             </p>
           </div>
         )}
-
         <ConversionSettings
           settings={settings}
           onSettingsChange={updateSettings}
@@ -64,7 +61,6 @@ export default function Home() {
           isConverting={isConverting}
         />
       </div>
-
       {/* Right Column: Preview & Comparison */}
       <div className="lg:w-2/3 space-y-6">
         <ComparisonView
@@ -72,7 +68,6 @@ export default function Home() {
           blockData={blockData}
           isConverting={isConverting}
         />
-
         {!imageBase64 && !blockData && (
           <div className="bg-stone-800 rounded-lg border border-stone-700 p-8 min-h-[400px] flex items-center justify-center">
             <p className="text-stone-500 text-sm font-mono text-center">

@@ -39,7 +39,7 @@ app.add_middleware(
 
 
 class RefinePromptRequest(BaseModel):
-    description: str = Field(..., min_length=1, max_length=500)
+    description: str = Field(..., min_length=1, max_length=2000)
 
 
 class RefinePromptResponse(BaseModel):
@@ -48,7 +48,7 @@ class RefinePromptResponse(BaseModel):
 
 
 class GenerateImageRequest(BaseModel):
-    prompt: str = Field(..., min_length=1, max_length=500)
+    prompt: str = Field(..., min_length=1, max_length=2000)
     width: int | None = Field(default=None, gt=0, le=2048)
     height: int | None = Field(default=None, gt=0, le=2048)
 

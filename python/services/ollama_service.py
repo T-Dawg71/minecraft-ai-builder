@@ -11,7 +11,7 @@ import os
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3")
 MAX_RETRIES = 3
-TIMEOUT_SECONDS = 30
+TIMEOUT_SECONDS = 90
 
 SYSTEM_PROMPT = """You are a prompt engineer for Stable Diffusion image generation.
 The generated image will be converted to Minecraft blocks, so follow these rules:
