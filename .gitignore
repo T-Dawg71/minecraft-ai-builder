@@ -42,3 +42,5 @@ next-env.d.ts
 
 echo "__pycache__/" >> ~/minecraft-ai-builder/.gitignore
 echo "*.pyc" >> ~/minecraft-ai-builder/.gitignore
+__pycache__/
+*.pyc
