@@ -4,6 +4,7 @@ import PipelineStatus from "@/components/PipelineStatus";
 import ComparisonView from "@/components/ComparisonView";
 import ConversionSettings from "@/components/ConversionSettings";
 import ExportPanel from "@/components/ExportPanel";
+import MaterialsList from "@/components/MaterialsList";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 
 export default function Home() {
@@ -70,6 +71,7 @@ export default function Home() {
           isConverting={isConverting}
         />
         {blockData && <ExportPanel blockData={blockData} initialDepth={settings.depth} />}
+        {blockData && <MaterialsList blockData={blockData} />}
       </div>
     </main>
   );
