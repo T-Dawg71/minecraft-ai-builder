@@ -3,6 +3,7 @@ import PromptInput from "@/components/PromptInput";
 import PipelineStatus from "@/components/PipelineStatus";
 import ComparisonView from "@/components/ComparisonView";
 import ConversionSettings from "@/components/ConversionSettings";
+import ExportPanel from "@/components/ExportPanel";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 
 export default function Home() {
@@ -68,13 +69,7 @@ export default function Home() {
           blockData={blockData}
           isConverting={isConverting}
         />
-        {!imageBase64 && !blockData && (
-          <div className="bg-stone-800 rounded-lg border border-stone-700 p-8 min-h-[400px] flex items-center justify-center">
-            <p className="text-stone-500 text-sm font-mono text-center">
-              Enter a description and click Generate to see your creation
-            </p>
-          </div>
-        )}
+        {blockData && <ExportPanel blockData={blockData} initialDepth={settings.depth} />}
       </div>
     </main>
   );

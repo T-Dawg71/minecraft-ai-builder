@@ -9,6 +9,12 @@ export interface BlockPalette {
   blocks: { name: string; rgb: [number, number, number] }[];
 }
 
+export interface ConversionPaletteBlock {
+  id: string;
+  name: string;
+  rgb: [number, number, number];
+}
+
 export const PRESETS: BlockPalette[] = [
   {
     name: "Classic",
@@ -93,8 +99,10 @@ export type GridSize = 32 | 64 | 128 | 256 | "custom";
 export type DepthMode = "flat" | "relief";
 
 export interface ConversionConfig {
-  gridSize:   number;
-  palette:    BlockPalette;
+  gridWidth:  number;
+  gridHeight: number;
+  palette:    ConversionPaletteBlock[];
+  palettePreset: string;
   dithering:  boolean;
   brightness: number;   // -100 to +100
   contrast:   number;   // -100 to +100
@@ -102,17 +110,30 @@ export interface ConversionConfig {
   depthMode:  DepthMode;
 }
 
+export type ConversionSettingsData = ConversionConfig;
+
 interface ConversionSettingsProps {
-  onChange:    (config: ConversionConfig) => void;
+  settings:    ConversionSettingsData;
+  onSettingsChange: (config: ConversionSettingsData) => void;
   onReconvert: () => void;
-  isLoading:   boolean;
+  isConverting: boolean;
 }
 
 // ── Default config ────────────────────────────────────────────────────────────
 
-const DEFAULT: ConversionConfig = {
-  gridSize:   128,
-  palette:    PRESETS[0],
+function toPaletteBlocks(palette: BlockPalette): ConversionPaletteBlock[] {
+  return palette.blocks.map((block) => ({
+    id: block.name,
+    name: block.name,
+    rgb: block.rgb,
+  }));
+}
+
+export const DEFAULT_SETTINGS: ConversionSettingsData = {
+  gridWidth:  128,
+  gridHeight: 128,
+  palette:    toPaletteBlocks(PRESETS[0]),
+  palettePreset: PRESETS[0].name,
   dithering:  false,
   brightness: 0,
   contrast:   0,
@@ -123,29 +144,38 @@ const DEFAULT: ConversionConfig = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ConversionSettings({
-  onChange,
+  settings,
+  onSettingsChange,
   onReconvert,
-  isLoading,
+  isConverting,
 }: ConversionSettingsProps) {
-  const [config,     setConfig]     = useState<ConversionConfig>(DEFAULT);
-  const [customSize, setCustomSize] = useState("128");
-  const [sizeSelect, setSizeSelect] = useState<GridSize>(128);
+  const [customSize, setCustomSize] = useState(String(settings.gridWidth));
 
-  // Notify parent on any change (DEV-180)
-  useEffect(() => { onChange(config); }, [config, onChange]);
+  useEffect(() => {
+    if (settings.gridWidth === settings.gridHeight) {
+      setCustomSize(String(settings.gridWidth));
+    }
+  }, [settings.gridWidth, settings.gridHeight]);
 
-  const patch = useCallback((p: Partial<ConversionConfig>) =>
-    setConfig(prev => ({ ...prev, ...p })), []);
+  const patch = useCallback(
+    (p: Partial<ConversionSettingsData>) => onSettingsChange({ ...settings, ...p }),
+    [settings, onSettingsChange]
+  );
+
+  const sizeSelect: GridSize =
+    settings.gridWidth === settings.gridHeight &&
+    [32, 64, 128, 256].includes(settings.gridWidth as 32 | 64 | 128 | 256)
+      ? (settings.gridWidth as 32 | 64 | 128 | 256)
+      : "custom";
 
   // ── Grid size (DEV-174) ───────────────────────────────────────────────────
   const handleSizeChange = (val: GridSize) => {
-    setSizeSelect(val);
-    if (val !== "custom") patch({ gridSize: val });
+    if (val !== "custom") patch({ gridWidth: val, gridHeight: val });
   };
   const handleCustomSize = (raw: string) => {
     setCustomSize(raw);
     const n = parseInt(raw, 10);
-    if (!isNaN(n) && n >= 8 && n <= 512) patch({ gridSize: n });
+    if (!isNaN(n) && n >= 8 && n <= 512) patch({ gridWidth: n, gridHeight: n });
   };
 
   // ── Slider helper ─────────────────────────────────────────────────────────
@@ -206,8 +236,14 @@ export default function ConversionSettings({
       <div className="flex flex-col gap-1">
         <label className="text-xs text-mc-stone-500 uppercase tracking-widest">Palette</label>
         <select
-          value={config.palette.name}
-          onChange={e => patch({ palette: PRESETS.find(p => p.name === e.target.value)! })}
+          value={settings.palettePreset}
+          onChange={e => {
+            const nextPalette = PRESETS.find(p => p.name === e.target.value) ?? PRESETS[0];
+            patch({
+              palettePreset: nextPalette.name,
+              palette: toPaletteBlocks(nextPalette),
+            });
+          }}
           className="rounded border border-mc-stone-300 bg-white px-2 py-1 text-xs focus:outline-none focus:border-mc-grass-500"
         >
           {PRESETS.map(p => (
@@ -215,7 +251,7 @@ export default function ConversionSettings({
           ))}
         </select>
         <div className="flex gap-1 mt-1 flex-wrap">
-          {config.palette.blocks.map(b => (
+          {settings.palette.map(b => (
             <div
               key={b.name}
               title={b.name.replace(/_/g, " ")}
@@ -230,26 +266,26 @@ export default function ConversionSettings({
       <div className="flex items-center justify-between">
         <span className="text-xs text-mc-stone-500 uppercase tracking-widest">Dithering</span>
         <button
-          onClick={() => patch({ dithering: !config.dithering })}
+          onClick={() => patch({ dithering: !settings.dithering })}
           className={`px-3 py-1 rounded border text-xs transition-colors ${
-            config.dithering
+            settings.dithering
               ? "bg-mc-grass-500 border-mc-grass-500 text-white"
               : "border-mc-stone-300 hover:bg-mc-stone-200 text-mc-stone-800"
           }`}
         >
-          {config.dithering ? "On" : "Off"}
+          {settings.dithering ? "On" : "Off"}
         </button>
       </div>
 
       {/* ── Brightness (DEV-177) ── */}
       <Slider
-        label="Brightness" value={config.brightness} min={-100} max={100}
+        label="Brightness" value={settings.brightness} min={-100} max={100}
         onChange={v => patch({ brightness: v })}
       />
 
       {/* ── Contrast (DEV-178) ── */}
       <Slider
-        label="Contrast" value={config.contrast} min={-100} max={100}
+        label="Contrast" value={settings.contrast} min={-100} max={100}
         onChange={v => patch({ contrast: v })}
       />
 
@@ -257,26 +293,26 @@ export default function ConversionSettings({
       <div className="flex flex-col gap-1">
         <div className="flex justify-between text-xs text-mc-stone-500">
           <span className="uppercase tracking-widest">Extrusion Depth</span>
-          <span className={config.depth > 1 ? "text-mc-grass-700 font-bold" : ""}>
-            {config.depth} block{config.depth !== 1 ? "s" : ""}
+          <span className={settings.depth > 1 ? "text-mc-grass-700 font-bold" : ""}>
+            {settings.depth} block{settings.depth !== 1 ? "s" : ""}
           </span>
         </div>
         <input
-          type="range" min={1} max={10} value={config.depth}
+          type="range" min={1} max={10} value={settings.depth}
           onChange={e => patch({ depth: +e.target.value })}
           className="w-full accent-mc-grass-500"
         />
         <div className="flex justify-between text-[10px] text-mc-stone-400">
           <span>1 (flat)</span><span>10</span>
         </div>
-        {config.depth > 1 && (
+        {settings.depth > 1 && (
           <div className="flex gap-2 mt-1">
             {(["flat", "relief"] as DepthMode[]).map(m => (
               <button
                 key={m}
                 onClick={() => patch({ depthMode: m })}
                 className={`px-3 py-1 rounded border text-xs capitalize transition-colors ${
-                  config.depthMode === m
+                  settings.depthMode === m
                     ? "bg-mc-grass-500 border-mc-grass-500 text-white"
                     : "border-mc-stone-300 hover:bg-mc-stone-200 text-mc-stone-800"
                 }`}
@@ -291,10 +327,10 @@ export default function ConversionSettings({
       {/* ── Re-convert (DEV-179) ── */}
       <button
         onClick={onReconvert}
-        disabled={isLoading}
+        disabled={isConverting}
         className="mt-1 px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wide bg-mc-grass-500 text-white hover:brightness-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
       >
-        {isLoading ? "Converting..." : "Re-convert"}
+        {isConverting ? "Converting..." : "Re-convert"}
       </button>
 
     </div>

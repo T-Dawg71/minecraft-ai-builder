@@ -1,13 +1,18 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import type { BlockGrid } from "@/components/BlockPreview";
+import {
+  materializeBlockGrid,
+  type BlockGrid,
+  type BlockGridData,
+} from "@/components/BlockPreview";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ComparisonViewProps {
-  imageBase64: string;
-  grid: BlockGrid;
+  imageBase64: string | null;
+  blockData: BlockGridData | null;
+  isConverting?: boolean;
 }
 
 interface PanOffset { x: number; y: number; }
@@ -33,13 +38,26 @@ function computeStats(grid: BlockGrid) {
   const uniqueTypes  = Object.keys(counts).length;
   const mostUsed     = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
   // Color accuracy: ratio of dominant block to total (higher = more uniform/accurate mapping)
-  const accuracy     = total > 0 ? Math.round((mostUsed[1] / total) * 100) : 0;
-  return { total, uniqueTypes, mostUsed: mostUsed[0], accuracy };
+  const accuracy     = total > 0 && mostUsed ? Math.round((mostUsed[1] / total) * 100) : 0;
+  return { total, uniqueTypes, mostUsed: mostUsed?.[0] ?? "none", accuracy };
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function ComparisonView({ imageBase64, grid }: ComparisonViewProps) {
+export default function ComparisonView({ imageBase64, blockData, isConverting = false }: ComparisonViewProps) {
+  if (!imageBase64 || !blockData?.grid?.length) {
+    return (
+      <div className="rounded-lg border border-stone-700 bg-stone-800 p-8 min-h-[400px] flex items-center justify-center">
+        <p className="text-center text-sm font-mono text-stone-500">
+          {isConverting
+            ? "Converting image into Minecraft blocks..."
+            : "Enter a description and click Generate to see your creation"}
+        </p>
+      </div>
+    );
+  }
+
+  const grid = materializeBlockGrid(blockData);
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const overlayRef   = useRef<HTMLCanvasElement>(null);
 
@@ -235,8 +253,8 @@ export default function ComparisonView({ imageBase64, grid }: ComparisonViewProp
       {/* ── Stats panel (DEV-171) ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
         {[
-          { label: "Total Blocks",   value: stats.total.toLocaleString() },
-          { label: "Unique Types",   value: stats.uniqueTypes },
+          { label: "Total Blocks",   value: (blockData.blockCount ?? stats.total).toLocaleString() },
+          { label: "Unique Types",   value: Object.keys(blockData.paletteSummary ?? {}).length || stats.uniqueTypes },
           { label: "Most Used",      value: stats.mostUsed.replace(/_/g, " ") },
           { label: "Color Accuracy", value: `${stats.accuracy}%` },
         ].map(({ label, value }) => (

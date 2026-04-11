@@ -11,6 +11,35 @@ export interface BlockCell {
 
 export type BlockGrid = BlockCell[][];  // [row][col]
 
+export interface BlockGridData {
+  grid: string[][];
+  colors: Record<string, number[]>;
+  dimensions?: {
+    width: number;
+    height: number;
+  };
+  blockCount?: number;
+  paletteSummary?: Record<string, number>;
+}
+
+export function rgbToCssColor(rgb?: number[]) {
+  if (!rgb || rgb.length !== 3) {
+    return "rgb(128, 128, 128)";
+  }
+
+  const [red, green, blue] = rgb.map((channel) => Math.max(0, Math.min(255, Math.round(channel))));
+  return `rgb(${red}, ${green}, ${blue})`;
+}
+
+export function materializeBlockGrid(blockData: BlockGridData): BlockGrid {
+  return blockData.grid.map((row) =>
+    row.map((blockId) => ({
+      name: blockId,
+      color: rgbToCssColor(blockData.colors[blockId]),
+    }))
+  );
+}
+
 interface BlockPreviewProps {
   grid: BlockGrid;
 }
