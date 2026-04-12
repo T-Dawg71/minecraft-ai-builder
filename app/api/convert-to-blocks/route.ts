@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+
+let cachedBlockColors: Record<string, number[]> | null = null;
+
+function getBlockColorMap(): Record<string, number[]> {
+  if (!cachedBlockColors) {
+    const filePath = join(process.cwd(), "python", "data", "block_colors.json");
+    const raw = readFileSync(filePath, "utf-8");
+    const blocks = JSON.parse(raw) as { id: string; rgb: number[] }[];
+    cachedBlockColors = {};
+    for (const block of blocks) {
+      cachedBlockColors[block.id] = block.rgb;
+    }
+  }
+  return cachedBlockColors;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,6 +53,12 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await upstream.json();
+    console.log("BACKEND GRID SAMPLE:", data.grid?.[0]?.slice(0, 3));
+
+    // Attach block colors to the response
+    const colorMap = getBlockColorMap();
+    data.colors = colorMap;
+
     return NextResponse.json(data);
   } catch (err) {
     console.error("convert-to-blocks route error:", err);
