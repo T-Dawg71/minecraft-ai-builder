@@ -40,8 +40,8 @@ export default function PipelineStatus({
     <div className="w-full rounded-md border-2 border-mc-stone-300 bg-mc-stone-100 p-4 font-mono text-sm">
       <ul className="flex flex-col gap-3">
         {STEPS.map(({ key, label }, i) => {
-          const isActive    = step !== "error" && step === key;
-          const isCompleted = step !== "error" && stepIndex(step) > i;
+          const isActive    = step !== "error" && step === key && key !== "done";
+          const isCompleted = step !== "error" && (stepIndex(step) > i || (step === "done" && key === "done"));
           const isError     = step === "error" && i === currentIndex;
 
           return (
