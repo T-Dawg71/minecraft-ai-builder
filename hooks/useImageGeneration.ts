@@ -100,7 +100,11 @@ export function useImageGeneration() {
           blockCount: data.block_count,
           paletteSummary: data.palette_summary,
         };
-
+        console.log("Debug colors:", JSON.stringify({
+        gridSample: data.grid?.[0]?.slice(0, 3),
+        hasColors: !!data.colors,
+        colorMatch: data.colors?.[data.grid?.[0]?.[0]],
+      }));
         setPartial({ blockData, step: "done", isConverting: false, isLoading: false });
       } catch (err) {
         setPartial({

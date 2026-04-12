@@ -3,9 +3,10 @@ import PromptInput from "@/components/PromptInput";
 import PipelineStatus from "@/components/PipelineStatus";
 import ComparisonView from "@/components/ComparisonView";
 import ConversionSettings from "@/components/ConversionSettings";
-import ExportPanel from "@/components/ExportPanel";
-import MaterialsList from "@/components/MaterialsList";
+import ImportGuide from "@/components/ImportGuide";
+import VersionCompatibility, { MinecraftVersion } from "@/components/VersionCompatibility";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
+import { useState } from "react";
 
 export default function Home() {
   const {
@@ -26,9 +27,14 @@ export default function Home() {
     setInput,
   } = useImageGeneration();
 
+  const [mcVersion, setMcVersion] = useState<MinecraftVersion>("1.20");
+
+  const usedBlocks = blockData?.paletteSummary ? Object.keys(blockData.paletteSummary) : [];
+
+  const showComparison = !!(imageBase64 || blockData);
+
   return (
     <main className="flex flex-col lg:flex-row gap-6 px-4 py-10 max-w-7xl mx-auto w-full">
-      {/* Left Column: Input & Settings */}
       <div className="lg:w-1/3 space-y-6">
         <h1 className="text-3xl font-bold font-mono text-mc-green tracking-wide uppercase">
           Minecraft Creator
@@ -62,16 +68,27 @@ export default function Home() {
           onReconvert={() => reconvert(settings)}
           isConverting={isConverting}
         />
-      </div>
-      {/* Right Column: Preview & Comparison */}
-      <div className="lg:w-2/3 space-y-6">
-        <ComparisonView
-          imageBase64={imageBase64 || null}
-          blockData={blockData}
-          isConverting={isConverting}
+        <VersionCompatibility
+          selectedVersion={mcVersion}
+          onVersionChange={setMcVersion}
+          usedBlocks={usedBlocks}
         />
-        {blockData && <ExportPanel blockData={blockData} initialDepth={settings.depth} />}
-        {blockData && <MaterialsList blockData={blockData} />}
+        <ImportGuide />
+      </div>
+      <div className="lg:w-2/3 space-y-6">
+        {showComparison ? (
+          <ComparisonView
+            imageBase64={imageBase64 || null}
+            blockData={blockData || null}
+            isConverting={isConverting}
+          />
+        ) : (
+          <div className="bg-stone-800 rounded-lg border border-stone-700 p-8 min-h-[400px] flex items-center justify-center">
+            <p className="text-stone-500 text-sm font-mono text-center">
+              Enter a description and click Generate to see your creation
+            </p>
+          </div>
+        )}
       </div>
     </main>
   );
