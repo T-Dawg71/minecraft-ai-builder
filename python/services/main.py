@@ -149,6 +149,7 @@ def _build_block_conversion_result(
         response["preview_image"] = _encode_preview_image(processed_image)
     else:
         response["grid"] = block_grid.to_block_id_grid()
+        print("PYTHON GRID SAMPLE:", response["grid"][0][:3])
 
     return response
 
