@@ -2,16 +2,33 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import sqlite3
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from io import BytesIO
 from typing import Optional
+
+from PIL import Image
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "history.db")
 MAX_HISTORY = 100
+
+
+def _make_thumbnail(image_base64: str, size: tuple = (256, 256)) -> str:
+    """Resize base64 image to a small thumbnail before storing."""
+    try:
+        img_bytes = base64.b64decode(image_base64)
+        img = Image.open(BytesIO(img_bytes))
+        img.thumbnail(size)
+        buffer = BytesIO()
+        img.save(buffer, format="PNG")
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+    except Exception:
+        return ""
 
 
 @dataclass
@@ -20,6 +37,7 @@ class HistoryEntry:
     user_prompt: str
     refined_prompt: str
     image_base64: str
+    image_thumbnail: str
     block_grid_json: str
     settings_json: str
     timestamp: str
@@ -41,9 +59,9 @@ class HistoryEntry:
             "id": self.id,
             "user_prompt": self.user_prompt,
             "refined_prompt": self.refined_prompt,
-            "image_thumbnail": self.image_base64[:200] + "..." if self.image_base64 else None,
+            "image_thumbnail": self.image_thumbnail,
             "has_blocks": bool(self.block_grid_json),
-            "settings": json.loads(self.settings_json) if self.settings_json else None,
+            "settings": json.loads(self.settings_json) if self.settings_json else {},
             "timestamp": self.timestamp,
         }
 
@@ -58,6 +76,7 @@ def _get_connection() -> sqlite3.Connection:
             user_prompt TEXT NOT NULL,
             refined_prompt TEXT NOT NULL DEFAULT '',
             image_base64 TEXT NOT NULL DEFAULT '',
+            image_thumbnail TEXT NOT NULL DEFAULT '',
             block_grid_json TEXT NOT NULL DEFAULT '',
             settings_json TEXT NOT NULL DEFAULT '{}',
             timestamp TEXT NOT NULL
@@ -73,9 +92,10 @@ def _row_to_entry(row: tuple) -> HistoryEntry:
         user_prompt=row[1],
         refined_prompt=row[2],
         image_base64=row[3],
-        block_grid_json=row[4],
-        settings_json=row[5],
-        timestamp=row[6],
+        image_thumbnail=row[4],
+        block_grid_json=row[5],
+        settings_json=row[6],
+        timestamp=row[7],
     )
 
 
@@ -91,13 +111,15 @@ def save_generation(
     timestamp = datetime.now(timezone.utc).isoformat()
     block_grid_json = json.dumps(block_grid) if block_grid else ""
     settings_json = json.dumps(settings) if settings else "{}"
+    image_thumbnail = _make_thumbnail(image_base64) if image_base64 else ""
 
     conn = _get_connection()
     try:
         conn.execute(
-            """INSERT INTO history (id, user_prompt, refined_prompt, image_base64, block_grid_json, settings_json, timestamp)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (entry_id, user_prompt, refined_prompt, image_base64, block_grid_json, settings_json, timestamp),
+            """INSERT INTO history
+               (id, user_prompt, refined_prompt, image_base64, image_thumbnail, block_grid_json, settings_json, timestamp)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (entry_id, user_prompt, refined_prompt, image_base64, image_thumbnail, block_grid_json, settings_json, timestamp),
         )
         conn.commit()
         _prune_old_entries(conn)
@@ -169,7 +191,6 @@ def _prune_old_entries(conn: sqlite3.Connection) -> None:
 
 
 if __name__ == "__main__":
-    # Quick test
     eid = save_generation(
         user_prompt="a castle on a hill",
         refined_prompt="A majestic castle...",

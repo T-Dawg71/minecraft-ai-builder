@@ -39,7 +39,7 @@ export function useImageGeneration() {
   }, []);
 
   const convertToBlocks = useCallback(
-    async (imageBase64: string, settings: ConversionSettingsData) => {
+    async (imageBase64: string, settings: ConversionSettingsData, inputPrompt?: string, refinedPrompt?: string) => {
       setPartial({ isConverting: true, step: "converting" });
 
       try {
@@ -100,12 +100,30 @@ export function useImageGeneration() {
           blockCount: data.block_count,
           paletteSummary: data.palette_summary,
         };
+
         console.log("Debug colors:", JSON.stringify({
-        gridSample: data.grid?.[0]?.slice(0, 3),
-        hasColors: !!data.colors,
-        colorMatch: data.colors?.[data.grid?.[0]?.[0]],
-      }));
+          gridSample: data.grid?.[0]?.slice(0, 3),
+          hasColors: !!data.colors,
+          colorMatch: data.colors?.[data.grid?.[0]?.[0]],
+        }));
+
         setPartial({ blockData, step: "done", isConverting: false, isLoading: false });
+
+        // --- Save to history ---
+        try {
+          await fetch("/api/history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_prompt: inputPrompt ?? "",
+              refined_prompt: refinedPrompt ?? "",
+              image_base64: imageBase64,
+            }),
+          });
+        } catch {
+          // History save failure is non-fatal — don't surface to user
+        }
+
       } catch (err) {
         setPartial({
           step: "error",
@@ -169,8 +187,8 @@ export function useImageGeneration() {
         return;
       }
 
-      // --- Step 3: convert to blocks ---
-      await convertToBlocks(imageBase64, activeSettings);
+      // --- Step 3: convert to blocks (pass prompts for history) ---
+      await convertToBlocks(imageBase64, activeSettings, input, refined);
     },
     [state.settings, convertToBlocks]
   );
@@ -179,9 +197,10 @@ export function useImageGeneration() {
     async (settings: ConversionSettingsData) => {
       if (!state.imageBase64) return;
       setPartial({ settings });
-      await convertToBlocks(state.imageBase64, settings);
+      // Pass existing prompts so reconvert also saves to history
+      await convertToBlocks(state.imageBase64, settings, state.input, state.refinedPrompt);
     },
-    [state.imageBase64, convertToBlocks]
+    [state.imageBase64, state.input, state.refinedPrompt, convertToBlocks]
   );
 
   const updateSettings = useCallback((settings: ConversionSettingsData) => {

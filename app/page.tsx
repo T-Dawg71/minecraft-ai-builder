@@ -7,6 +7,7 @@ import ImportGuide from "@/components/ImportGuide";
 import VersionCompatibility, { MinecraftVersion } from "@/components/VersionCompatibility";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { useState } from "react";
+import HistoryGallery from "@/components/HistoryGallery";
 
 export default function Home() {
   const {
@@ -29,12 +30,17 @@ export default function Home() {
 
   const [mcVersion, setMcVersion] = useState<MinecraftVersion>("1.20");
 
+  const handleRemix = (prompt: string) => {
+    setInput(prompt);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const usedBlocks = blockData?.paletteSummary ? Object.keys(blockData.paletteSummary) : [];
 
   const showComparison = !!(imageBase64 || blockData);
 
   return (
-    <main className="flex flex-col lg:flex-row gap-6 px-4 py-10 max-w-7xl mx-auto w-full">
+    <main className="flex flex-col lg:flex-row flex-wrap gap-6 px-4 py-10 max-w-7xl mx-auto w-full">
       <div className="lg:w-1/3 space-y-6">
         <h1 className="text-3xl font-bold font-mono text-mc-green tracking-wide uppercase">
           Minecraft Creator
@@ -75,6 +81,7 @@ export default function Home() {
         />
         <ImportGuide />
       </div>
+
       <div className="lg:w-2/3 space-y-6">
         {showComparison ? (
           <ComparisonView
@@ -89,6 +96,11 @@ export default function Home() {
             </p>
           </div>
         )}
+      </div>
+
+      {/* History gallery — full width below the two columns */}
+      <div className="w-full mt-6">
+        <HistoryGallery onRemix={handleRemix} />
       </div>
     </main>
   );
