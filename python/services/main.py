@@ -17,6 +17,7 @@ from services.export_utils import (
     export_structure,
     render_preview_image,
 )
+from services.history_service import save_generation, get_history, get_entry, delete_entry, clear_history
 from services.image_processor import preprocess_image
 from services.ollama_service import refine_prompt
 from services.sd_service import (
@@ -102,15 +103,20 @@ class ExportBlockListRequest(BaseModel):
     format: Literal["csv", "json"] = "json"
 
 
-def _decode_base64_image(image_base64: str) -> Image.Image:
-    """Decode a base64 or data-URL encoded image into a Pillow image."""
-    encoded_payload = image_base64.split(",", 1)[-1].strip()
+class SaveHistoryRequest(BaseModel):
+    user_prompt: str
+    refined_prompt: str = ""
+    image_base64: str = ""
+    block_grid: dict | None = None
+    settings: dict | None = None
 
+
+def _decode_base64_image(image_base64: str) -> Image.Image:
+    encoded_payload = image_base64.split(",", 1)[-1].strip()
     try:
         image_bytes = base64.b64decode(encoded_payload, validate=True)
     except (binascii.Error, ValueError) as exc:
         raise ValueError("image_base64 must contain valid base64-encoded image data") from exc
-
     try:
         return Image.open(BytesIO(image_bytes)).convert("RGB")
     except (UnidentifiedImageError, OSError) as exc:
@@ -118,7 +124,6 @@ def _decode_base64_image(image_base64: str) -> Image.Image:
 
 
 def _encode_preview_image(image: Image.Image) -> str:
-    """Encode a Pillow image as base64 PNG for preview responses."""
     buffer = BytesIO()
     image.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
@@ -128,7 +133,6 @@ def _build_block_conversion_result(
     request: ConvertToBlocksRequest,
     output_format: Literal["grid", "preview"],
 ) -> dict[str, Any]:
-    """Run the decode -> preprocess -> map pipeline and shape the API response."""
     image = _decode_base64_image(request.image_base64)
     processed_image = preprocess_image(
         image,
@@ -149,7 +153,6 @@ def _build_block_conversion_result(
         response["preview_image"] = _encode_preview_image(processed_image)
     else:
         response["grid"] = block_grid.to_block_id_grid()
-        print("PYTHON GRID SAMPLE:", response["grid"][0][:3])
 
     return response
 
@@ -158,9 +161,10 @@ async def _convert_to_blocks_response(
     request: ConvertToBlocksRequest,
     output_format: Literal["grid", "preview"],
 ) -> dict[str, Any]:
-    """Offload CPU-bound block conversion work from the event loop."""
     return await asyncio.to_thread(_build_block_conversion_result, request, output_format)
 
+
+# ── Core endpoints ─────────────────────────────────────────────────────────────
 
 @app.get("/health")
 async def health_check():
@@ -186,7 +190,6 @@ async def refine_prompt_endpoint(request: RefinePromptRequest):
 async def generate_image_endpoint(request: GenerateImageRequest):
     width = request.width if request.width is not None else DEFAULT_WIDTH
     height = request.height if request.height is not None else DEFAULT_HEIGHT
-
     try:
         image_bytes = generate_image(request.prompt, width=width, height=height)
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
@@ -228,6 +231,8 @@ async def convert_to_blocks_endpoint(
     except Exception:
         raise HTTPException(status_code=500, detail="Unexpected block conversion error")
 
+
+# ── Export endpoints ───────────────────────────────────────────────────────────
 
 @app.post("/export/schematic")
 async def export_schematic_endpoint(request: ExportSchematicRequest):
@@ -284,9 +289,56 @@ async def export_block_list_endpoint(request: ExportBlockListRequest):
                     "Cache-Control": "no-store",
                 },
             )
-
         return JSONResponse(export_block_list_json(request.grid), headers={"Cache-Control": "no-store"})
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception:
         raise HTTPException(status_code=500, detail="Unexpected block list export error")
+
+
+# ── History endpoints ──────────────────────────────────────────────────────────
+
+@app.post("/history")
+async def save_history_endpoint(request: SaveHistoryRequest):
+    try:
+        entry_id = save_generation(
+            user_prompt=request.user_prompt,
+            refined_prompt=request.refined_prompt,
+            image_base64=request.image_base64,
+            block_grid=request.block_grid,
+            settings=request.settings,
+        )
+        return {"id": entry_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/history")
+async def get_history_endpoint(page: int = Query(default=1, ge=1), per_page: int = Query(default=20, ge=1, le=50)):
+    try:
+        entries = get_history(page=page, per_page=per_page)
+        return {"entries": entries, "page": page, "per_page": per_page}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/history/{entry_id}")
+async def get_history_entry_endpoint(entry_id: str):
+    entry = get_entry(entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return entry
+
+
+@app.delete("/history/{entry_id}")
+async def delete_history_entry_endpoint(entry_id: str):
+    deleted = delete_entry(entry_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return {"deleted": True}
+
+
+@app.delete("/history")
+async def clear_history_endpoint():
+    count = clear_history()
+    return {"deleted_count": count}
