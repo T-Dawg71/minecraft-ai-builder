@@ -11,6 +11,7 @@ type DownloadAction = "schematic" | "preview" | "block-list";
 interface ExportPanelProps {
   blockData: BlockGridData;
   initialDepth?: number;
+  mapArtMode?: boolean;
 }
 
 function parseFilename(contentDisposition: string | null, fallback: string) {
@@ -59,7 +60,7 @@ function estimateExportSize(
   return Math.max(512, Math.round(headerBytes + payloadBytes));
 }
 
-export default function ExportPanel({ blockData, initialDepth = 1 }: ExportPanelProps) {
+export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = false }: ExportPanelProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [format, setFormat] = useState<ExportFormat>("schem");
   const [orientation, setOrientation] = useState<Orientation>("floor");
@@ -71,8 +72,8 @@ export default function ExportPanel({ blockData, initialDepth = 1 }: ExportPanel
   const height = blockData.grid.length || blockData.dimensions?.height || 0;
   const uniqueBlocks = Object.keys(blockData.paletteSummary ?? {}).length;
   const estimatedSize = useMemo(
-    () => estimateExportSize(width, height, depth, format, uniqueBlocks),
-    [width, height, depth, format, uniqueBlocks]
+    () => estimateExportSize(width, height, mapArtMode ? 1 : depth, format, uniqueBlocks),
+    [width, height, depth, format, uniqueBlocks, mapArtMode]
   );
 
   async function downloadFile(action: DownloadAction) {
@@ -84,7 +85,7 @@ export default function ExportPanel({ blockData, initialDepth = 1 }: ExportPanel
         action === "schematic"
           ? {
               endpoint: "/api/export/schematic",
-              payload: { grid: blockData.grid, format, orientation, depth },
+              payload: { grid: blockData.grid, format, orientation, depth, map_art_mode: mapArtMode },
               fallbackName: `minecraft-build.${format}`,
             }
           : action === "preview"
@@ -194,9 +195,16 @@ export default function ExportPanel({ blockData, initialDepth = 1 }: ExportPanel
                 <p className="mt-2">Blocks: {(blockData.blockCount ?? width * height).toLocaleString()}</p>
                 <p className="mt-1">Unique materials: {uniqueBlocks || "Unknown"}</p>
                 <p className="mt-1">Best for: {orientation === "wall" ? "pixel art walls" : "ground builds and map art"}</p>
+                <p className="mt-1">Map art mode: {mapArtMode ? "enabled" : "disabled"}</p>
               </div>
             </div>
           </div>
+
+          {mapArtMode && (
+            <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-mono text-xs text-amber-800">
+              Map art mode exports a staircase-height schematic so the image shades correctly when viewed on an in-game map.
+            </p>
+          )}
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <button

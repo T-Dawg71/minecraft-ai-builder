@@ -25,7 +25,13 @@ class BlockGrid:
 
     def to_block_id_grid(self) -> list[list[str]]:
         """Return just the block IDs for each cell in the grid."""
-        return [[block["id"] if block["id"].startswith("minecraft:") else f"minecraft:{block['id']}" for block in row] for row in self.blocks]
+        return [
+            [
+                block["id"] if ":" in block["id"] else f"minecraft:{block['id']}"
+                for block in row
+            ]
+            for row in self.blocks
+        ]
 
 
 def image_to_block_grid(

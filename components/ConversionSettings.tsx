@@ -104,6 +104,7 @@ export interface ConversionConfig {
   gridHeight: number;
   palette:    ConversionPaletteBlock[];
   palettePreset: string;
+  mapArtMode: boolean;
   dithering:  boolean;
   brightness: number;   // -100 to +100
   contrast:   number;   // -100 to +100
@@ -164,6 +165,7 @@ export const DEFAULT_SETTINGS: ConversionSettingsData = {
   gridHeight: 128,
   palette:    toPaletteBlocks(PRESETS[0]),
   palettePreset: PRESETS[0].name,
+  mapArtMode: false,
   dithering:  false,
   brightness: 0,
   contrast:   0,
@@ -289,6 +291,21 @@ export default function ConversionSettings({
           }`}
         >
           {settings.dithering ? "On" : "Off"}
+        </button>
+      </div>
+
+      {/* ── Map Art Mode (DEV-283) ── */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-mc-stone-500 uppercase tracking-widest">Map Art Mode</span>
+        <button
+          onClick={() => patch({ mapArtMode: !settings.mapArtMode })}
+          className={`px-3 py-1 rounded border text-xs transition-colors ${
+            settings.mapArtMode
+              ? "bg-mc-grass-500 border-mc-grass-500 text-white"
+              : "border-mc-stone-300 hover:bg-mc-stone-200 text-mc-stone-800"
+          }`}
+        >
+          {settings.mapArtMode ? "On" : "Off"}
         </button>
       </div>
 

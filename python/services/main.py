@@ -91,6 +91,7 @@ class ExportSchematicRequest(BaseModel):
     format: Literal["schem", "nbt"] = "schem"
     orientation: Literal["wall", "floor"] = "floor"
     depth: int = Field(default=1, ge=1, le=64)
+    map_art_mode: bool = False
 
 
 class ExportPreviewImageRequest(BaseModel):
@@ -242,6 +243,7 @@ async def export_schematic_endpoint(request: ExportSchematicRequest):
             format=request.format,
             orientation=request.orientation,
             depth=request.depth,
+            map_art_mode=request.map_art_mode,
         )
         extension = request.format
         return Response(

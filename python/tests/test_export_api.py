@@ -45,6 +45,36 @@ class TestExportEndpoints:
         assert "filename=\"minecraft-build.nbt\"" in response.headers["content-disposition"]
         assert response.content.startswith(b"\x0a")
 
+    def test_export_map_art_mode_generates_schematic(self):
+        response = client.post(
+            "/export/schematic",
+            json={
+                "grid": TEST_GRID,
+                "format": "schem",
+                "orientation": "floor",
+                "depth": 1,
+                "map_art_mode": True,
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.content.startswith(b"\x1f\x8b")
+
+    def test_export_map_art_requires_floor_orientation(self):
+        response = client.post(
+            "/export/schematic",
+            json={
+                "grid": TEST_GRID,
+                "format": "schem",
+                "orientation": "wall",
+                "depth": 1,
+                "map_art_mode": True,
+            },
+        )
+
+        assert response.status_code == 400
+        assert "Map art mode requires floor orientation" in response.text
+
     def test_export_preview_image_returns_png(self):
         response = client.post(
             "/export/preview-image",

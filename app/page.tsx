@@ -3,6 +3,7 @@ import PromptInput from "@/components/PromptInput";
 import PipelineStatus from "@/components/PipelineStatus";
 import ComparisonView from "@/components/ComparisonView";
 import ConversionSettings from "@/components/ConversionSettings";
+import ExportPanel from "@/components/ExportPanel";
 import ImportGuide from "@/components/ImportGuide";
 import VersionCompatibility, { MinecraftVersion } from "@/components/VersionCompatibility";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
@@ -84,11 +85,20 @@ export default function Home() {
 
       <div className="lg:w-2/3 space-y-6">
         {showComparison ? (
-          <ComparisonView
-            imageBase64={imageBase64 || null}
-            blockData={blockData || null}
-            isConverting={isConverting}
-          />
+          <>
+            <ComparisonView
+              imageBase64={imageBase64 || null}
+              blockData={blockData || null}
+              isConverting={isConverting}
+            />
+            {blockData && (
+              <ExportPanel
+                blockData={blockData}
+                initialDepth={settings.depth}
+                mapArtMode={settings.mapArtMode}
+              />
+            )}
+          </>
         ) : (
           <div className="bg-stone-800 rounded-lg border border-stone-700 p-8 min-h-[400px] flex items-center justify-center">
             <p className="text-stone-500 text-sm font-mono text-center">

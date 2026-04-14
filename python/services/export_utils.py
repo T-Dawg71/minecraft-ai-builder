@@ -143,7 +143,13 @@ def render_preview_image(grid: GridPayload, scale: int = DEFAULT_PREVIEW_SCALE) 
     return buffer.getvalue()
 
 
-def export_structure(grid: GridPayload, format: ExportFormat, orientation: Orientation, depth: int) -> bytes:
+def export_structure(
+    grid: GridPayload,
+    format: ExportFormat,
+    orientation: Orientation,
+    depth: int,
+    map_art_mode: bool = False,
+) -> bytes:
     """Export the grid into either Sponge schematic or raw NBT bytes."""
     normalized = normalize_grid(grid)
 
@@ -151,9 +157,9 @@ def export_structure(grid: GridPayload, format: ExportFormat, orientation: Orien
         raise ValueError("depth must be between 1 and 64")
 
     if format == "schem":
-        return _build_sponge_schematic(normalized, orientation=orientation, depth=depth)
+        return _build_sponge_schematic(normalized, orientation=orientation, depth=depth, map_art_mode=map_art_mode)
 
-    return _build_structure_nbt(normalized, orientation=orientation, depth=depth)
+    return _build_structure_nbt(normalized, orientation=orientation, depth=depth, map_art_mode=map_art_mode)
 
 
 def _ensure_namespace(block_id: str) -> str:
@@ -179,24 +185,94 @@ def _iter_positions(grid: GridPayload, orientation: Orientation, depth: int):
                     yield x, y, z, block_id
 
 
-def _build_sponge_schematic(grid: GridPayload, orientation: Orientation, depth: int) -> bytes:
+def _shade_step_for_block(block_id: str, color_map: dict[str, tuple[int, int, int]]) -> int:
+    rgb = color_map.get(block_id, UNKNOWN_BLOCK_COLOR)
+    brightness = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]
+    if brightness < 85:
+        return -1
+    if brightness > 170:
+        return 1
+    return 0
+
+
+def _build_map_art_positions(grid: GridPayload) -> tuple[list[tuple[int, int, int, str]], int, int]:
+    """
+    Build map-art columns with staircase Y offsets.
+
+    Minecraft map shading supports three effective shades for the same block color,
+    produced by relative height changes. We model this by walking each X column in Z
+    order and stepping Y by -1/0/+1 based on dark/mid/light luminance buckets.
+    """
+    color_map = load_block_color_map()
+    height = len(grid)
+    width = len(grid[0])
+
+    positions: list[tuple[int, int, int, str]] = []
+    min_y = 0
+    max_y = 0
+
+    for x in range(width):
+        current_y = 0
+        for z in range(height):
+            block_id = grid[z][x]
+            current_y += _shade_step_for_block(block_id, color_map)
+            min_y = min(min_y, current_y)
+            max_y = max(max_y, current_y)
+            positions.append((x, current_y, z, block_id))
+
+    return positions, min_y, max_y
+
+
+def _build_sponge_schematic(
+    grid: GridPayload,
+    orientation: Orientation,
+    depth: int,
+    map_art_mode: bool = False,
+) -> bytes:
     width = len(grid[0])
     height = len(grid)
 
-    schem_width = width
-    schem_height = depth if orientation == "floor" else height
-    schem_length = height if orientation == "floor" else depth
+    if map_art_mode and orientation != "floor":
+        raise ValueError("Map art mode requires floor orientation")
+
+    if map_art_mode:
+        map_positions, min_y, max_y = _build_map_art_positions(grid)
+        schem_width = width
+        schem_height = max_y - min_y + 1
+        schem_length = height
+    else:
+        schem_width = width
+        schem_height = depth if orientation == "floor" else height
+        schem_length = height if orientation == "floor" else depth
 
     unique_ids = ["minecraft:air"]
     id_to_index = {"minecraft:air": 0}
 
-    for row in grid:
-        for block_id in row:
+    if map_art_mode:
+        for *_coords, block_id in map_positions:
             if block_id not in id_to_index:
                 id_to_index[block_id] = len(unique_ids)
                 unique_ids.append(block_id)
+    else:
+        for row in grid:
+            for block_id in row:
+                if block_id not in id_to_index:
+                    id_to_index[block_id] = len(unique_ids)
+                    unique_ids.append(block_id)
 
-    block_data = [id_to_index[block_id] for *_coords, block_id in _iter_positions(grid, orientation, depth)]
+    if map_art_mode:
+        occupied: dict[tuple[int, int, int], int] = {}
+        for x, raw_y, z, block_id in map_positions:
+            y = raw_y - min_y
+            occupied[(x, y, z)] = id_to_index[block_id]
+
+        block_data: list[int] = []
+        for y in range(schem_height):
+            for z in range(schem_length):
+                for x in range(schem_width):
+                    block_data.append(occupied.get((x, y, z), 0))
+    else:
+        block_data = [id_to_index[block_id] for *_coords, block_id in _iter_positions(grid, orientation, depth)]
     encoded_block_data = _encode_varints(block_data)
 
     palette_tags = [
@@ -229,21 +305,40 @@ def _build_sponge_schematic(grid: GridPayload, orientation: Orientation, depth: 
     return gzip.compress(root)
 
 
-def _build_structure_nbt(grid: GridPayload, orientation: Orientation, depth: int) -> bytes:
+def _build_structure_nbt(
+    grid: GridPayload,
+    orientation: Orientation,
+    depth: int,
+    map_art_mode: bool = False,
+) -> bytes:
     width = len(grid[0])
     height = len(grid)
 
-    size_y = depth if orientation == "floor" else height
-    size_z = height if orientation == "floor" else depth
+    if map_art_mode and orientation != "floor":
+        raise ValueError("Map art mode requires floor orientation")
+
+    if map_art_mode:
+        map_positions, min_y, max_y = _build_map_art_positions(grid)
+        size_y = max_y - min_y + 1
+        size_z = height
+    else:
+        size_y = depth if orientation == "floor" else height
+        size_z = height if orientation == "floor" else depth
 
     palette_ids: list[str] = []
     id_to_index: dict[str, int] = {}
 
-    for row in grid:
-        for block_id in row:
+    if map_art_mode:
+        for *_coords, block_id in map_positions:
             if block_id not in id_to_index:
                 id_to_index[block_id] = len(palette_ids)
                 palette_ids.append(block_id)
+    else:
+        for row in grid:
+            for block_id in row:
+                if block_id not in id_to_index:
+                    id_to_index[block_id] = len(palette_ids)
+                    palette_ids.append(block_id)
 
     palette_payloads = [
         _compound_payload([_named_string("Name", block_id)])
@@ -251,7 +346,13 @@ def _build_structure_nbt(grid: GridPayload, orientation: Orientation, depth: int
     ]
 
     block_payloads = []
-    for x, y, z, block_id in _iter_positions(grid, orientation, depth):
+    iter_positions = (
+        [(x, raw_y - min_y, z, block_id) for x, raw_y, z, block_id in map_positions]
+        if map_art_mode
+        else list(_iter_positions(grid, orientation, depth))
+    )
+
+    for x, y, z, block_id in iter_positions:
         block_payloads.append(
             _compound_payload(
                 [
