@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback, useMemo } from "react";
+import Image from "next/image";
 import {
   materializeBlockGrid,
   type BlockGrid,
@@ -46,6 +47,7 @@ export default function ComparisonView({ imageBase64, blockData, isConverting = 
   const [zoom, setZoom]             = useState(1);
   const [offset, setOffset]         = useState<PanOffset>({ x: 0, y: 0 });
   const [overlayMode, setOverlayMode] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   const hasData = !!(imageBase64 && blockData?.grid?.length);
 
@@ -111,6 +113,7 @@ export default function ComparisonView({ imageBase64, blockData, isConverting = 
 
   const onMouseDown = (e: React.MouseEvent) => {
     isDragging.current = true;
+    setDragging(true);
     dragStart.current  = { x: e.clientX, y: e.clientY };
     lastOffset.current = offset;
   };
@@ -121,7 +124,10 @@ export default function ComparisonView({ imageBase64, blockData, isConverting = 
       y: lastOffset.current.y + e.clientY - dragStart.current.y,
     });
   };
-  const onMouseUp = () => { isDragging.current = false; };
+  const onMouseUp = () => {
+    isDragging.current = false;
+    setDragging(false);
+  };
 
   const cellPx   = CELL_SIZE * zoom;
   const imgStyle = {
@@ -137,12 +143,12 @@ export default function ComparisonView({ imageBase64, blockData, isConverting = 
     onMouseDown,
     onMouseMove,
     onMouseUp,
-    onMouseLeave: () => { isDragging.current = false; },
+    onMouseLeave: () => { isDragging.current = false; setDragging(false); },
   };
 
   const viewportStyle = {
     height:   400,
-    cursor:   isDragging.current ? "grabbing" : "grab",
+    cursor:   dragging ? "grabbing" : "grab",
   };
 
   return (
@@ -184,11 +190,14 @@ export default function ComparisonView({ imageBase64, blockData, isConverting = 
           {...panHandlers}
         >
           <div style={imgStyle}>
-            <img
+            <Image
               src={`data:image/png;base64,${imageBase64}`}
               alt="Original"
-              style={{ width: "100%", height: "100%", display: "block", imageRendering: "pixelated" }}
+              fill
+              unoptimized
               draggable={false}
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              style={{ objectFit: "fill", imageRendering: "pixelated" }}
             />
           </div>
           <div style={imgStyle}>
@@ -205,11 +214,14 @@ export default function ComparisonView({ imageBase64, blockData, isConverting = 
               {...panHandlers}
             >
               <div style={imgStyle}>
-                <img
+                <Image
                   src={`data:image/png;base64,${imageBase64}`}
                   alt="Original"
-                  style={{ width: "100%", height: "100%", display: "block", imageRendering: "pixelated" }}
+                  fill
+                  unoptimized
                   draggable={false}
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  style={{ objectFit: "fill", imageRendering: "pixelated" }}
                 />
               </div>
             </div>

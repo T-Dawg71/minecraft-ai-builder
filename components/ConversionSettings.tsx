@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import PaletteBuilder from "@/components/PaletteBuilder";
 
 // ── Palette definitions (DEV-175) ─────────────────────────────────────────────
 
@@ -119,6 +120,35 @@ interface ConversionSettingsProps {
   isConverting: boolean;
 }
 
+interface SliderProps {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+}
+
+function Slider({ label, value, min, max, onChange }: SliderProps) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex justify-between text-xs text-mc-stone-500">
+        <span className="uppercase tracking-widest">{label}</span>
+        <span className={value !== 0 ? "text-mc-grass-700 font-bold" : ""}>
+          {value > 0 ? `+${value}` : value}
+        </span>
+      </div>
+      <input
+        type="range" min={min} max={max} value={value}
+        onChange={e => onChange(+e.target.value)}
+        className="w-full accent-mc-grass-500"
+      />
+      <div className="flex justify-between text-[10px] text-mc-stone-400">
+        <span>{min}</span><span>0</span><span>+{max}</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Default config ────────────────────────────────────────────────────────────
 
 function toPaletteBlocks(palette: BlockPalette): ConversionPaletteBlock[] {
@@ -151,12 +181,6 @@ export default function ConversionSettings({
 }: ConversionSettingsProps) {
   const [customSize, setCustomSize] = useState(String(settings.gridWidth));
 
-  useEffect(() => {
-    if (settings.gridWidth === settings.gridHeight) {
-      setCustomSize(String(settings.gridWidth));
-    }
-  }, [settings.gridWidth, settings.gridHeight]);
-
   const patch = useCallback(
     (p: Partial<ConversionSettingsData>) => onSettingsChange({ ...settings, ...p }),
     [settings, onSettingsChange]
@@ -170,36 +194,16 @@ export default function ConversionSettings({
 
   // ── Grid size (DEV-174) ───────────────────────────────────────────────────
   const handleSizeChange = (val: GridSize) => {
-    if (val !== "custom") patch({ gridWidth: val, gridHeight: val });
+    if (val !== "custom") {
+      patch({ gridWidth: val, gridHeight: val });
+      setCustomSize(String(val));
+    }
   };
   const handleCustomSize = (raw: string) => {
     setCustomSize(raw);
     const n = parseInt(raw, 10);
     if (!isNaN(n) && n >= 8 && n <= 512) patch({ gridWidth: n, gridHeight: n });
   };
-
-  // ── Slider helper ─────────────────────────────────────────────────────────
-  const Slider = ({
-    label, value, min, max,
-    onChange: onSlide,
-  }: { label: string; value: number; min: number; max: number; onChange: (v: number) => void }) => (
-    <div className="flex flex-col gap-1">
-      <div className="flex justify-between text-xs text-mc-stone-500">
-        <span className="uppercase tracking-widest">{label}</span>
-        <span className={value !== 0 ? "text-mc-grass-700 font-bold" : ""}>
-          {value > 0 ? `+${value}` : value}
-        </span>
-      </div>
-      <input
-        type="range" min={min} max={max} value={value}
-        onChange={e => onSlide(+e.target.value)}
-        className="w-full accent-mc-grass-500"
-      />
-      <div className="flex justify-between text-[10px] text-mc-stone-400">
-        <span>{min}</span><span>0</span><span>+{max}</span>
-      </div>
-    </div>
-  );
 
   return (
     <div className="flex flex-col gap-4 w-full font-mono text-sm rounded-md border-2 border-mc-stone-300 bg-mc-stone-100 p-4">
@@ -260,6 +264,17 @@ export default function ConversionSettings({
             />
           ))}
         </div>
+
+        <PaletteBuilder
+          selectedBlocks={settings.palette}
+          onChange={(nextPalette, sourceLabel) => {
+            if (nextPalette.length === 0) return;
+            patch({
+              palette: nextPalette,
+              palettePreset: sourceLabel ? `Custom: ${sourceLabel}` : "Custom",
+            });
+          }}
+        />
       </div>
 
       {/* ── Dithering (DEV-176) ── */}

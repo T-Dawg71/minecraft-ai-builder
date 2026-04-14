@@ -64,6 +64,7 @@ export default function BlockPreview({ grid }: BlockPreviewProps) {
   // Zoom & pan state
   const [zoom, setZoom]     = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
   const isDragging = useRef(false);
   const dragStart  = useRef({ x: 0, y: 0 });
   const lastOffset = useRef({ x: 0, y: 0 });
@@ -123,6 +124,7 @@ export default function BlockPreview({ grid }: BlockPreviewProps) {
   // ── Pan handlers (DEV-163) ─────────────────────────────────────────────────
   const onMouseDown = (e: React.MouseEvent) => {
     isDragging.current  = true;
+    setDragging(true);
     dragStart.current   = { x: e.clientX, y: e.clientY };
     lastOffset.current  = offset;
   };
@@ -133,7 +135,10 @@ export default function BlockPreview({ grid }: BlockPreviewProps) {
       y: lastOffset.current.y + e.clientY - dragStart.current.y,
     });
   };
-  const onMouseUp = () => { isDragging.current = false; };
+  const onMouseUp = () => {
+    isDragging.current = false;
+    setDragging(false);
+  };
 
   // ── Tooltip (DEV-161) ──────────────────────────────────────────────────────
   const onMouseMoveTooltip = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -191,12 +196,12 @@ export default function BlockPreview({ grid }: BlockPreviewProps) {
       <div
         ref={containerRef}
         className="relative overflow-hidden rounded-md border-2 border-mc-stone-300 bg-mc-dark"
-        style={{ height: 400, cursor: isDragging.current ? "grabbing" : "grab" }}
+        style={{ height: 400, cursor: dragging ? "grabbing" : "grab" }}
         onWheel={onWheel}
         onMouseDown={onMouseDown}
         onMouseMove={(e) => { onMouseMove(e); onMouseMoveTooltip(e); }}
         onMouseUp={onMouseUp}
-        onMouseLeave={() => { isDragging.current = false; setTooltip(null); }}
+        onMouseLeave={() => { isDragging.current = false; setDragging(false); setTooltip(null); }}
       >
         <div
           style={{

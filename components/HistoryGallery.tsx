@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 
 interface HistoryEntry {
   id: string;
@@ -64,9 +65,12 @@ export default function HistoryGallery({ onRemix }: Props) {
         {entries.map((entry) => (
           <div key={entry.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             {entry.image_thumbnail ? (
-              <img
+              <Image
                 src={`data:image/png;base64,${entry.image_thumbnail}`}
                 alt={entry.user_prompt}
+                width={512}
+                height={256}
+                unoptimized
                 className="w-full h-28 object-cover"
               />
             ) : (

@@ -79,7 +79,7 @@ function WorldEditGuide() {
         <Step number={3} title="Load the schematic in-game">
           <p>Open Minecraft, go to where you want to place the build, and run:</p>
           <code className="block bg-stone-900 px-3 py-2 rounded text-xs text-emerald-400 mt-1">
-            //schem load filename
+            {"//schem load filename"}
           </code>
           <p className="text-stone-400 text-xs mt-1">
             (without the .schem extension)
@@ -88,10 +88,10 @@ function WorldEditGuide() {
         <Step number={4} title="Paste the build">
           <p>Stand where you want the build placed and run:</p>
           <code className="block bg-stone-900 px-3 py-2 rounded text-xs text-emerald-400 mt-1">
-            //paste
+            {"//paste"}
           </code>
           <p className="text-stone-400 text-xs mt-1">
-            Use <code className="bg-stone-900 px-1 rounded">//undo</code> if you need to reposition.
+            Use <code className="bg-stone-900 px-1 rounded">{"//undo"}</code> if you need to reposition.
           </p>
         </Step>
       </div>
@@ -112,7 +112,7 @@ function StructureBlockGuide() {
             .minecraft/saves/[world]/generated/minecraft/structures/
           </code>
           <p className="text-stone-400 text-xs mt-1">
-            Create the <code className="bg-stone-900 px-1 rounded">structures</code> folder if it doesn't exist.
+            Create the <code className="bg-stone-900 px-1 rounded">structures</code> folder if it doesn&apos;t exist.
           </p>
         </Step>
         <Step number={2} title="Get a Structure Block">
@@ -160,7 +160,7 @@ function LitematicaGuide() {
           </p>
         </Step>
         <Step number={3} title="Place with Litematica">
-          <p>Use Litematica's placement tools to position and place the build with a holographic preview overlay.</p>
+          <p>Use Litematica&apos;s placement tools to position and place the build with a holographic preview overlay.</p>
         </Step>
       </div>
     </div>
@@ -176,7 +176,7 @@ function TroubleshootingGuide() {
           solution="Make sure the file has the .schem extension (not .schematic). Check that the file is in the correct schematics folder."
         />
         <Issue
-          problem="Structure block says 'Structure not found'"
+          problem="Structure block says &apos;Structure not found&apos;"
           solution="Verify the .nbt file is in the correct folder: .minecraft/saves/[world]/generated/minecraft/structures/. The name must match exactly (case-sensitive, no extension)."
         />
         <Issue

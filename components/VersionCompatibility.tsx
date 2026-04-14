@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 
 export type MinecraftVersion = '1.16' | '1.17' | '1.18' | '1.19' | '1.20' | '1.21';
 
