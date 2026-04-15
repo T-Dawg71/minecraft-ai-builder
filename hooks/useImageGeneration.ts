@@ -140,6 +140,7 @@ export function useImageGeneration() {
     async (input: string) => {
       if (!input.trim()) return;
 
+      const activeSettings = state.settings;
       setPartial({ isLoading: true, error: "", step: "refining", input, blockData: null });
 
       // --- Step 1: refine prompt ---
@@ -176,7 +177,7 @@ export function useImageGeneration() {
         const data = await res.json();
         imageBase64 = data.image ?? data.imageBase64 ?? data.base64 ?? "";
         if (!imageBase64) throw new Error("No image data returned.");
-        setPartial({ imageBase64, step: "idle", isLoading: false });
+        setPartial({ imageBase64 });
       } catch (err) {
         setPartial({
           step: "error",
@@ -185,8 +186,11 @@ export function useImageGeneration() {
         });
         return;
       }
+
+      // --- Step 3: convert to blocks ---
+      await convertToBlocks(imageBase64, activeSettings, input, refined);
     },
-    []
+    [state.settings, convertToBlocks]
   );
 
   const reconvert = useCallback(
@@ -194,7 +198,6 @@ export function useImageGeneration() {
       const sourceImage = imageBase64Override || state.imageBase64;
       if (!sourceImage) return;
       setPartial({ settings });
-      // Pass existing prompts so reconvert also saves to history
       await convertToBlocks(sourceImage, settings, state.input, state.refinedPrompt);
     },
     [state.imageBase64, state.input, state.refinedPrompt, convertToBlocks]

@@ -22,6 +22,17 @@ An AI-powered tool that converts text descriptions into Minecraft block patterns
 
 ## First Time Setup
 
+### Compressed info:
+
+# Terminal 1 — Ollama
+ollama serve
+# bash# Terminal 2 — Stable Diffusion
+cd ~/stable-diffusion-webui-forge && source venv/bin/activate && ./webui.sh --api --listen --skip-torch-cuda-test
+# bash# Terminal 3 — Python Backend
+cd ~/minecraft-ai-builder/python && source venv/bin/activate && uvicorn services.main:app --reload
+# bash# Terminal 4 — Next.js Frontend
+cd ~/minecraft-ai-builder && npm run dev
+
 ### 1. Clone the Repo
 ```bash
 git clone https://github.com/T-Dawg71/minecraft-ai-builder.git
