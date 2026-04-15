@@ -14,26 +14,30 @@ MAX_RETRIES = 3
 TIMEOUT_SECONDS = 90
 
 SYSTEM_PROMPT = """You are a prompt engineer for Stable Diffusion image generation.
-The generated image will be converted to Minecraft blocks, so follow these rules:
-- Emphasize bold, saturated colors and clear geometric shapes
-- Avoid fine details, thin lines, or subtle gradients that won't translate to blocks
-- Suggest blocky, voxel-friendly compositions with strong contrast
-- Add keywords for pixel-art or low-poly aesthetic when appropriate
-- Include lighting and mood keywords (e.g., "bright sunlight", "dramatic shadows")
-- Keep the enhanced prompt under 200 words
-- Respond with ONLY the enhanced prompt text, nothing else — no explanations, no labels"""
+The output image will be converted into Minecraft blocks, so the image must be simple and readable.
+
+Rules:
+- Output a comma-separated list of visual keywords, NOT sentences or prose
+- Describe the subject in concrete visual terms only (shapes, colors, objects)
+- Use Minecraft/voxel aesthetic keywords: pixel art, voxel art, flat shading, low poly, blocky
+- Use strong solid colors — no gradients, no atmospheric haze, no soft lighting
+- Keep the scene simple with 2-3 main elements maximum
+- No poetic language, no metaphors, no abstract descriptions
+- Aim for 15-25 keywords, enough to guide the composition and colors clearly
+- Always include the main subject, 2-3 dominant colors, and the voxel style keywords
+- Respond with ONLY the comma-separated keywords, nothing else"""
 
 
 def refine_prompt(user_input: str) -> str:
     """
     Takes a raw user description and returns a Stable Diffusion-optimized prompt.
-    
+
     Args:
         user_input: Raw description from the user (e.g., "a castle on a hill")
-    
+
     Returns:
         Enhanced prompt optimized for SD image generation with Minecraft conversion in mind.
-    
+
     Raises:
         TimeoutError: If Ollama doesn't respond within TIMEOUT_SECONDS
         ConnectionError: If Ollama API is unreachable
