@@ -9,6 +9,7 @@ import VersionCompatibility, { MinecraftVersion } from "@/components/VersionComp
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { useState } from "react";
 import HistoryGallery from "@/components/HistoryGallery";
+import ImageEditor from "@/components/ImageEditor";
 
 export default function Home() {
   const {
@@ -30,6 +31,7 @@ export default function Home() {
   } = useImageGeneration();
 
   const [mcVersion, setMcVersion] = useState<MinecraftVersion>("1.20");
+  const [editedImageBase64, setEditedImageBase64] = useState<string | null>(null);
 
   const handleRemix = (prompt: string) => {
     setInput(prompt);
@@ -37,6 +39,8 @@ export default function Home() {
   };
 
   const usedBlocks = blockData?.paletteSummary ? Object.keys(blockData.paletteSummary) : [];
+  const conversionSourceImage = editedImageBase64 || imageBase64 || "";
+  const previewImage = editedImageBase64 || imageBase64 || null;
 
   const showComparison = !!(imageBase64 || blockData);
 
@@ -52,7 +56,7 @@ export default function Home() {
             setInput(val);
             if (!val) reset();
           }}
-          onSubmit={() => run(input, settings)}
+          onSubmit={() => run(input)}
           onClear={reset}
           isLoading={isLoading}
         />
@@ -72,7 +76,9 @@ export default function Home() {
         <ConversionSettings
           settings={settings}
           onSettingsChange={updateSettings}
-          onReconvert={() => reconvert(settings)}
+          onReconvert={() => reconvert(settings, conversionSourceImage)}
+          hasImage={!!imageBase64}
+          hasBlockData={!!blockData}
           isConverting={isConverting}
         />
         <VersionCompatibility
@@ -84,10 +90,16 @@ export default function Home() {
       </div>
 
       <div className="lg:w-2/3 space-y-6">
+        <ImageEditor
+          key={imageBase64 || "no-image"}
+          imageBase64={imageBase64 || null}
+          disabled={isConverting}
+          onEditedImageChange={setEditedImageBase64}
+        />
         {showComparison ? (
           <>
             <ComparisonView
-              imageBase64={imageBase64 || null}
+              imageBase64={previewImage}
               blockData={blockData || null}
               isConverting={isConverting}
             />

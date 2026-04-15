@@ -118,6 +118,8 @@ interface ConversionSettingsProps {
   settings:    ConversionSettingsData;
   onSettingsChange: (config: ConversionSettingsData) => void;
   onReconvert: () => void;
+  hasImage: boolean;
+  hasBlockData: boolean;
   isConverting: boolean;
 }
 
@@ -179,6 +181,8 @@ export default function ConversionSettings({
   settings,
   onSettingsChange,
   onReconvert,
+  hasImage,
+  hasBlockData,
   isConverting,
 }: ConversionSettingsProps) {
   const [customSize, setCustomSize] = useState(String(settings.gridWidth));
@@ -359,10 +363,10 @@ export default function ConversionSettings({
       {/* ── Re-convert (DEV-179) ── */}
       <button
         onClick={onReconvert}
-        disabled={isConverting}
+        disabled={isConverting || !hasImage}
         className="mt-1 px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wide bg-mc-grass-500 text-white hover:brightness-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
       >
-        {isConverting ? "Converting..." : "Re-convert"}
+        {isConverting ? "Converting..." : hasBlockData ? "Re-convert" : "Convert to Blocks"}
       </button>
 
     </div>
