@@ -7,6 +7,7 @@ import { DEFAULT_SETTINGS } from "@/components/ConversionSettings";
 interface GenerationState {
   input: string;
   refinedPrompt: string;
+  negativePrompt: string; // NEW
   imageBase64: string;
   blockData: BlockGridData | null;
   step: PipelineStep;
@@ -19,6 +20,7 @@ interface GenerationState {
 const INITIAL: GenerationState = {
   input: "",
   refinedPrompt: "",
+  negativePrompt: "", // NEW
   imageBase64: "",
   blockData: null,
   step: "idle",
@@ -87,6 +89,7 @@ export function useImageGeneration() {
                   colorsMap[block.id] = block.rgb;
                 }
               }
+              console.log("After update, lime_wool:", colorsMap["minecraft:lime_wool"]);
             }
           } catch {
             // Fall back to placeholders
@@ -145,6 +148,7 @@ export function useImageGeneration() {
 
       // --- Step 1: refine prompt ---
       let refined = "";
+      let negative = ""; // NEW
       try {
         const res = await fetch("/api/refine-prompt", {
           method: "POST",
@@ -154,8 +158,9 @@ export function useImageGeneration() {
         if (!res.ok) throw new Error(`Refine failed: ${res.status}`);
         const data = await res.json();
         refined = data.refinedPrompt ?? data.refined_prompt ?? data.result ?? data.refined ?? "";
+        negative = data.negative ?? ""; // NEW
         if (!refined) throw new Error("No refined prompt returned.");
-        setPartial({ refinedPrompt: refined, step: "generating" });
+        setPartial({ refinedPrompt: refined, negativePrompt: negative, step: "generating" }); // NEW: store negative
       } catch (err) {
         setPartial({
           step: "error",
@@ -171,7 +176,10 @@ export function useImageGeneration() {
         const res = await fetch("/api/generate-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: refined }),
+          body: JSON.stringify({
+            prompt: refined,
+            negative_prompt: negative || undefined, // NEW: pass negative to SD
+          }),
         });
         if (!res.ok) throw new Error(`Image generation failed: ${res.status}`);
         const data = await res.json();

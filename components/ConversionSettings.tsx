@@ -18,6 +18,93 @@ export interface ConversionPaletteBlock {
 
 export const PRESETS: BlockPalette[] = [
   {
+    name: "Full",
+    blocks: [
+      // Concrete — most saturated, best for bold colors
+      { name: "minecraft:white_concrete",            rgb: [207, 213, 214] },
+      { name: "minecraft:orange_concrete",           rgb: [224,  97,   0] },
+      { name: "minecraft:magenta_concrete",          rgb: [169,  48, 159] },
+      { name: "minecraft:light_blue_concrete",       rgb: [ 36, 137, 199] },
+      { name: "minecraft:yellow_concrete",           rgb: [240, 175,  19] },
+      { name: "minecraft:lime_concrete",             rgb: [ 94, 168,  24] },
+      { name: "minecraft:pink_concrete",             rgb: [213, 101, 142] },
+      { name: "minecraft:gray_concrete",             rgb: [ 54,  57,  61] },
+      { name: "minecraft:light_gray_concrete",       rgb: [125, 125, 115] },
+      { name: "minecraft:cyan_concrete",             rgb: [ 21, 119, 136] },
+      { name: "minecraft:purple_concrete",           rgb: [100,  31, 156] },
+      { name: "minecraft:blue_concrete",             rgb: [ 44,  46, 143] },
+      { name: "minecraft:brown_concrete",            rgb: [ 96,  59,  31] },
+      { name: "minecraft:green_concrete",            rgb: [ 73,  91,  36] },
+      { name: "minecraft:red_concrete",              rgb: [142,  33,  33] },
+      { name: "minecraft:black_concrete",            rgb: [  8,  10,  15] },
+      // Concrete Powder — slightly lighter variants, fills in mid-tones
+      { name: "minecraft:white_concrete_powder",     rgb: [225, 227, 220] },
+      { name: "minecraft:orange_concrete_powder",    rgb: [227, 131,  32] },
+      { name: "minecraft:magenta_concrete_powder",   rgb: [201,  99, 196] },
+      { name: "minecraft:light_blue_concrete_powder",rgb: [ 74, 180, 213] },
+      { name: "minecraft:yellow_concrete_powder",    rgb: [233, 218,  96] },
+      { name: "minecraft:lime_concrete_powder",      rgb: [125, 191,  42] },
+      { name: "minecraft:pink_concrete_powder",      rgb: [228, 153, 164] },
+      { name: "minecraft:gray_concrete_powder",      rgb: [ 76,  81,  84] },
+      { name: "minecraft:light_gray_concrete_powder",rgb: [154, 161, 161] },
+      { name: "minecraft:cyan_concrete_powder",      rgb: [ 22, 177, 181] },
+      { name: "minecraft:purple_concrete_powder",    rgb: [131,  56, 178] },
+      { name: "minecraft:blue_concrete_powder",      rgb: [ 70,  73, 167] },
+      { name: "minecraft:brown_concrete_powder",     rgb: [125,  84,  53] },
+      { name: "minecraft:green_concrete_powder",     rgb: [ 97, 119,  44] },
+      { name: "minecraft:red_concrete_powder",       rgb: [168,  54,  50] },
+      { name: "minecraft:black_concrete_powder",     rgb: [ 26,  26,  29] },
+      // Wool — slightly warmer/softer than concrete
+      { name: "minecraft:white_wool",                rgb: [233, 236, 236] },
+      { name: "minecraft:orange_wool",               rgb: [240, 118,  19] },
+      { name: "minecraft:magenta_wool",              rgb: [189,  68, 179] },
+      { name: "minecraft:light_blue_wool",           rgb: [ 58, 175, 217] },
+      { name: "minecraft:yellow_wool",               rgb: [248, 197,  39] },
+      { name: "minecraft:lime_wool",                 rgb: [113, 187,  27] },
+      { name: "minecraft:pink_wool",                 rgb: [237, 141, 172] },
+      { name: "minecraft:gray_wool",                 rgb: [ 62,  68,  71] },
+      { name: "minecraft:light_gray_wool",           rgb: [142, 142, 134] },
+      { name: "minecraft:cyan_wool",                 rgb: [ 22, 156, 156] },
+      { name: "minecraft:purple_wool",               rgb: [121,  42, 172] },
+      { name: "minecraft:blue_wool",                 rgb: [ 60,  68, 170] },
+      { name: "minecraft:brown_wool",                rgb: [114,  71,  40] },
+      { name: "minecraft:green_wool",                rgb: [ 84, 109,  27] },
+      { name: "minecraft:red_wool",                  rgb: [160,  40,  35] },
+      { name: "minecraft:black_wool",                rgb: [ 26,  22,  22] },
+      // Terracotta — earthy mid-tones, great for skin/brown/orange ranges
+      { name: "minecraft:white_terracotta",          rgb: [210, 178, 161] },
+      { name: "minecraft:orange_terracotta",         rgb: [162,  84,  38] },
+      { name: "minecraft:magenta_terracotta",        rgb: [149,  88, 108] },
+      { name: "minecraft:light_blue_terracotta",     rgb: [113, 108, 137] },
+      { name: "minecraft:yellow_terracotta",         rgb: [186, 133,  35] },
+      { name: "minecraft:lime_terracotta",           rgb: [103, 117,  52] },
+      { name: "minecraft:pink_terracotta",           rgb: [161,  78,  78] },
+      { name: "minecraft:gray_terracotta",           rgb: [ 57,  42,  35] },
+      { name: "minecraft:light_gray_terracotta",     rgb: [135, 107,  98] },
+      { name: "minecraft:cyan_terracotta",           rgb: [ 87,  91,  91] },
+      { name: "minecraft:purple_terracotta",         rgb: [118,  70,  86] },
+      { name: "minecraft:blue_terracotta",           rgb: [ 74,  59,  91] },
+      { name: "minecraft:brown_terracotta",          rgb: [ 77,  51,  35] },
+      { name: "minecraft:green_terracotta",          rgb: [ 76,  83,  42] },
+      { name: "minecraft:red_terracotta",            rgb: [143,  61,  46] },
+      { name: "minecraft:black_terracotta",          rgb: [ 37,  22,  16] },
+      // Special blocks — unique colors not covered by dyed blocks
+      { name: "minecraft:emerald_block",             rgb: [ 79, 188,  73] },
+      { name: "minecraft:redstone_block",            rgb: [175,  26,   5] },
+      { name: "minecraft:lapis_block",               rgb: [ 29,  58, 139] },
+      { name: "minecraft:gold_block",                rgb: [246, 208,  61] },
+      { name: "minecraft:diamond_block",             rgb: [ 99, 219, 213] },
+      { name: "minecraft:netherite_block",           rgb: [ 68,  63,  66] },
+      { name: "minecraft:snow_block",                rgb: [249, 254, 254] },
+      { name: "minecraft:obsidian",                  rgb: [ 21,  17,  31] },
+      { name: "minecraft:slime_block",               rgb: [109, 182, 108] },
+      { name: "minecraft:honey_block",               rgb: [201, 133,  38] },
+      { name: "minecraft:sea_lantern",               rgb: [172, 209, 200] },
+      { name: "minecraft:prismarine",                rgb: [ 99, 171, 158] },
+      { name: "minecraft:dark_prismarine",           rgb: [ 51,  96,  76] },
+    ],
+  },
+  {
     name: "Classic",
     blocks: [
       { name: "grass_block",   rgb: [106, 127,  57] },
@@ -100,34 +187,34 @@ export type GridSize = 32 | 64 | 128 | 256 | "custom";
 export type DepthMode = "flat" | "relief";
 
 export interface ConversionConfig {
-  gridWidth:  number;
-  gridHeight: number;
-  palette:    ConversionPaletteBlock[];
+  gridWidth:     number;
+  gridHeight:    number;
+  palette:       ConversionPaletteBlock[];
   palettePreset: string;
-  mapArtMode: boolean;
-  dithering:  boolean;
-  brightness: number;   // -100 to +100
-  contrast:   number;   // -100 to +100
-  depth:      number;   // 1-10
-  depthMode:  DepthMode;
+  mapArtMode:    boolean;
+  dithering:     boolean;
+  brightness:    number;
+  contrast:      number;
+  depth:         number;
+  depthMode:     DepthMode;
 }
 
 export type ConversionSettingsData = ConversionConfig;
 
 interface ConversionSettingsProps {
-  settings:    ConversionSettingsData;
+  settings:         ConversionSettingsData;
   onSettingsChange: (config: ConversionSettingsData) => void;
-  onReconvert: () => void;
-  hasImage: boolean;
-  hasBlockData: boolean;
-  isConverting: boolean;
+  onReconvert:      () => void;
+  hasImage:         boolean;
+  hasBlockData:     boolean;
+  isConverting:     boolean;
 }
 
 interface SliderProps {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
+  label:    string;
+  value:    number;
+  min:      number;
+  max:      number;
   onChange: (v: number) => void;
 }
 
@@ -156,23 +243,23 @@ function Slider({ label, value, min, max, onChange }: SliderProps) {
 
 function toPaletteBlocks(palette: BlockPalette): ConversionPaletteBlock[] {
   return palette.blocks.map((block) => ({
-    id: block.name,
+    id:   block.name,
     name: block.name,
-    rgb: block.rgb,
+    rgb:  block.rgb,
   }));
 }
 
 export const DEFAULT_SETTINGS: ConversionSettingsData = {
-  gridWidth:  128,
-  gridHeight: 128,
-  palette:    toPaletteBlocks(PRESETS[0]),
+  gridWidth:     64,
+  gridHeight:    64,
+  palette:       toPaletteBlocks(PRESETS[0]),
   palettePreset: PRESETS[0].name,
-  mapArtMode: false,
-  dithering:  false,
-  brightness: 0,
-  contrast:   0,
-  depth:      1,
-  depthMode:  "flat",
+  mapArtMode:    false,
+  dithering:     false,
+  brightness:    0,
+  contrast:      0,
+  depth:         1,
+  depthMode:     "flat",
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -198,13 +285,13 @@ export default function ConversionSettings({
       ? (settings.gridWidth as 32 | 64 | 128 | 256)
       : "custom";
 
-  // ── Grid size (DEV-174) ───────────────────────────────────────────────────
   const handleSizeChange = (val: GridSize) => {
     if (val !== "custom") {
       patch({ gridWidth: val, gridHeight: val });
       setCustomSize(String(val));
     }
   };
+
   const handleCustomSize = (raw: string) => {
     setCustomSize(raw);
     const n = parseInt(raw, 10);
@@ -214,7 +301,7 @@ export default function ConversionSettings({
   return (
     <div className="flex flex-col gap-4 w-full font-mono text-sm rounded-md border-2 border-mc-stone-300 bg-mc-stone-100 p-4">
 
-      {/* ── Grid size (DEV-174) ── */}
+      {/* ── Grid size ── */}
       <div className="flex flex-col gap-1">
         <label className="text-xs text-mc-stone-500 uppercase tracking-widest">Grid Size</label>
         <div className="flex gap-2 flex-wrap">
@@ -242,7 +329,7 @@ export default function ConversionSettings({
         )}
       </div>
 
-      {/* ── Palette (DEV-175) ── */}
+      {/* ── Palette ── */}
       <div className="flex flex-col gap-1">
         <label className="text-xs text-mc-stone-500 uppercase tracking-widest">Palette</label>
         <select
@@ -251,7 +338,7 @@ export default function ConversionSettings({
             const nextPalette = PRESETS.find(p => p.name === e.target.value) ?? PRESETS[0];
             patch({
               palettePreset: nextPalette.name,
-              palette: toPaletteBlocks(nextPalette),
+              palette:       toPaletteBlocks(nextPalette),
             });
           }}
           className="rounded border border-mc-stone-300 bg-white px-2 py-1 text-xs focus:outline-none focus:border-mc-grass-500"
@@ -276,14 +363,14 @@ export default function ConversionSettings({
           onChange={(nextPalette, sourceLabel) => {
             if (nextPalette.length === 0) return;
             patch({
-              palette: nextPalette,
+              palette:       nextPalette,
               palettePreset: sourceLabel ? `Custom: ${sourceLabel}` : "Custom",
             });
           }}
         />
       </div>
 
-      {/* ── Dithering (DEV-176) ── */}
+      {/* ── Dithering ── */}
       <div className="flex items-center justify-between">
         <span className="text-xs text-mc-stone-500 uppercase tracking-widest">Dithering</span>
         <button
@@ -298,7 +385,7 @@ export default function ConversionSettings({
         </button>
       </div>
 
-      {/* ── Map Art Mode (DEV-283) ── */}
+      {/* ── Map Art Mode ── */}
       <div className="flex items-center justify-between">
         <span className="text-xs text-mc-stone-500 uppercase tracking-widest">Map Art Mode</span>
         <button
@@ -313,19 +400,19 @@ export default function ConversionSettings({
         </button>
       </div>
 
-      {/* ── Brightness (DEV-177) ── */}
+      {/* ── Brightness ── */}
       <Slider
         label="Brightness" value={settings.brightness} min={-100} max={100}
         onChange={v => patch({ brightness: v })}
       />
 
-      {/* ── Contrast (DEV-178) ── */}
+      {/* ── Contrast ── */}
       <Slider
         label="Contrast" value={settings.contrast} min={-100} max={100}
         onChange={v => patch({ contrast: v })}
       />
 
-      {/* ── Depth (DEV-212) ── */}
+      {/* ── Extrusion Depth ── */}
       <div className="flex flex-col gap-1">
         <div className="flex justify-between text-xs text-mc-stone-500">
           <span className="uppercase tracking-widest">Extrusion Depth</span>
@@ -360,7 +447,7 @@ export default function ConversionSettings({
         )}
       </div>
 
-      {/* ── Re-convert (DEV-179) ── */}
+      {/* ── Re-convert ── */}
       <button
         onClick={onReconvert}
         disabled={isConverting || !hasImage}

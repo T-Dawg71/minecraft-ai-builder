@@ -32,8 +32,7 @@ function computeStats(grid: BlockGrid) {
   }
   const uniqueTypes  = Object.keys(counts).length;
   const mostUsed     = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-  const accuracy     = total > 0 && mostUsed ? Math.round((mostUsed[1] / total) * 100) : 0;
-  return { total, uniqueTypes, mostUsed: mostUsed?.[0] ?? "none", accuracy };
+  return { total, uniqueTypes, mostUsed: mostUsed?.[0] ?? "none", };
 }
 
 export default function ComparisonView({ imageBase64, blockData, isConverting = false }: ComparisonViewProps) {
@@ -242,12 +241,11 @@ export default function ComparisonView({ imageBase64, blockData, isConverting = 
       )}
 
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
           {[
             { label: "Total Blocks",   value: (blockData?.blockCount ?? stats.total).toLocaleString() },
             { label: "Unique Types",   value: Object.keys(blockData?.paletteSummary ?? {}).length || stats.uniqueTypes },
             { label: "Most Used",      value: stats.mostUsed.replace(/minecraft:/g, "").replace(/_/g, " ") },
-            { label: "Color Accuracy", value: `${stats.accuracy}%` },
           ].map(({ label, value }) => (
             <div key={label} className="rounded-md border border-stone-700 bg-stone-800 px-3 py-2">
               <p className="text-stone-500 uppercase tracking-widest text-[10px]">{label}</p>
