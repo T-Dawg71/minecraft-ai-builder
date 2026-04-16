@@ -13,30 +13,66 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3")
 MAX_RETRIES = 3
 TIMEOUT_SECONDS = 90
 
-SYSTEM_PROMPT = """You are a prompt engineer for Stable Diffusion image generation.
-The output image will be converted into Minecraft blocks, so the image must be simple and readable.
+SYSTEM_PROMPT = """You are a prompt engineer specializing in images that convert cleanly to Minecraft block art.
 
-Rules:
-- Output a comma-separated list of visual keywords, NOT sentences or prose
-- Describe the subject in concrete visual terms only (shapes, colors, objects)
-- Use Minecraft/voxel aesthetic keywords: pixel art, voxel art, flat shading, low poly, blocky
-- Use strong solid colors — no gradients, no atmospheric haze, no soft lighting
-- Keep the scene simple with 2-3 main elements maximum
-- No poetic language, no metaphors, no abstract descriptions
-- Aim for 15-25 keywords, enough to guide the composition and colors clearly
-- Always include the main subject, 2-3 dominant colors, and the voxel style keywords
-- Respond with ONLY the comma-separated keywords, nothing else"""
+Rewrite the user's description into a Stable Diffusion prompt optimized for block conversion.
+
+OUTPUT FORMAT — respond with exactly two lines, nothing else:
+Prompt: <comma-separated keywords>
+Negative: <comma-separated keywords>
+
+PROMPT RULES:
+- 15-25 keywords, comma-separated, no prose or sentences
+- FIRST keyword must be the subject + color: e.g. "lime green heart", "red star", "blue circle"
+- SECOND keyword must be the art style: always use "flat vector illustration"
+- Then add: bold black outline, solid fill colors, centered on white background, no shading
+- Then add composition: single subject, centered, simple scene
+- Then add technical: high contrast, clean edges, 2D graphic design, clipart style
+- Use ONLY these color terms (Minecraft-safe palette):
+  lime green, dark green, red, crimson, orange, yellow, white, light gray, dark gray,
+  black, brown, tan, light blue, cyan, navy blue, purple, magenta, pink
+- NEVER use: neon, bright, vivid, saturated, fluorescent, electric, glowing
+
+NEGATIVE RULES:
+- Always include ALL of these: photograph, photo, realistic, 3D render, CGI, studio shot,
+  real object, marker pen, sticker, product photo, neon colors, oversaturated, fluorescent,
+  shadows, gradients, shading, glow, bloom, fog, photorealistic, texture detail, bokeh,
+  depth of field, motion blur, soft lighting, noise, film grain, glitter, sparkle, grunge,
+  dark background, black background"""
 
 
-def refine_prompt(user_input: str) -> str:
+def parse_refined_prompt(response: str) -> tuple[str, str]:
     """
-    Takes a raw user description and returns a Stable Diffusion-optimized prompt.
+    Parse Ollama's two-line response into (positive_prompt, negative_prompt).
+    Falls back gracefully if the format isn't followed exactly.
+    """
+    positive = ""
+    negative = "photograph, photo, realistic, shadows, gradients, shading, glow, photorealistic, texture detail, blur, noise"
+
+    for line in response.strip().splitlines():
+        line = line.strip()
+        if line.lower().startswith("prompt:"):
+            positive = line[len("prompt:"):].strip()
+        elif line.lower().startswith("negative:"):
+            negative = line[len("negative:"):].strip()
+
+    # Fallback: if Ollama ignored the format and returned a blob, use it as-is
+    if not positive:
+        positive = response.strip()
+
+    return positive, negative
+
+
+def refine_prompt(user_input: str) -> tuple[str, str]:
+    """
+    Takes a raw user description and returns (positive_prompt, negative_prompt)
+    both optimized for Stable Diffusion with Minecraft block conversion in mind.
 
     Args:
         user_input: Raw description from the user (e.g., "a castle on a hill")
 
     Returns:
-        Enhanced prompt optimized for SD image generation with Minecraft conversion in mind.
+        Tuple of (positive_prompt, negative_prompt) strings.
 
     Raises:
         TimeoutError: If Ollama doesn't respond within TIMEOUT_SECONDS
@@ -50,7 +86,7 @@ def refine_prompt(user_input: str) -> str:
     payload = {
         "model": OLLAMA_MODEL,
         "system": SYSTEM_PROMPT,
-        "prompt": f"Enhance this user description for Stable Diffusion: {user_input.strip()}",
+        "prompt": f"Convert this description into a Minecraft block art prompt. Subject and color first, then 'flat vector illustration': {user_input.strip()}",
         "stream": False,
     }
 
@@ -62,12 +98,12 @@ def refine_prompt(user_input: str) -> str:
             response.raise_for_status()
 
             data = response.json()
-            refined = data.get("response", "").strip()
+            raw = data.get("response", "").strip()
 
-            if not refined:
+            if not raw:
                 raise RuntimeError("Ollama returned an empty response")
 
-            return refined
+            return parse_refined_prompt(raw)
 
         except requests.exceptions.Timeout:
             last_error = TimeoutError(
@@ -96,11 +132,17 @@ def refine_prompt(user_input: str) -> str:
 
 # Quick test when running directly
 if __name__ == "__main__":
-    test_input = "a castle on a hill at sunset"
-    print(f"Original: {test_input}")
-    print(f"Refining...")
-    try:
-        result = refine_prompt(test_input)
-        print(f"Refined: {result}")
-    except Exception as e:
-        print(f"Error: {e}")
+    test_inputs = [
+        "a green heart",
+        "a castle on a hill",
+        "a red apple",
+    ]
+    for test_input in test_inputs:
+        print(f"\nOriginal:  {test_input}")
+        print(f"Refining...")
+        try:
+            positive, negative = refine_prompt(test_input)
+            print(f"Positive: {positive}")
+            print(f"Negative: {negative}")
+        except Exception as e:
+            print(f"Error: {e}")
