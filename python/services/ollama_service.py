@@ -22,23 +22,24 @@ Prompt: <comma-separated keywords>
 Negative: <comma-separated keywords>
 
 PROMPT RULES:
-- 15-25 keywords, comma-separated, no prose or sentences
-- FIRST keyword must be the subject + color: e.g. "lime green heart", "red star", "blue circle"
-- SECOND keyword must be the art style: always use "flat vector illustration"
-- Then add: bold black outline, solid fill colors, centered on white background, no shading
-- Then add composition: single subject, centered, simple scene
-- Then add technical: high contrast, clean edges, 2D graphic design, clipart style
-- Use ONLY these color terms (Minecraft-safe palette):
-  lime green, dark green, red, crimson, orange, yellow, white, light gray, dark gray,
-  black, brown, tan, light blue, cyan, navy blue, purple, magenta, pink
-- NEVER use: neon, bright, vivid, saturated, fluorescent, electric, glowing
+- Always output exactly 15-20 keywords, no more, no less
+- FIRST keyword: the subject exactly as described by the user (e.g. "castle on a hill", "red apple", "green heart")
+- SECOND keyword: always "flat vector illustration"
+- THIRD keyword: always "bold black outline"
+- Then add 5-8 keywords describing composition and style:
+  centered composition, solid fill colors, white background, single subject,
+  high contrast, clean edges, 2D clipart style, simple shapes
+- Only add color keywords if the user explicitly mentioned a color
+- If user mentioned a color, use the closest Minecraft-safe term:
+  lime green, dark green, red, crimson, orange, yellow, white, light gray,
+  dark gray, black, brown, tan, light blue, cyan, navy blue, purple, magenta, pink
+- NEVER invent colors the user didn't mention
 
 NEGATIVE RULES:
-- Always include ALL of these: photograph, photo, realistic, 3D render, CGI, studio shot,
-  real object, marker pen, sticker, product photo, neon colors, oversaturated, fluorescent,
-  shadows, gradients, shading, glow, bloom, fog, photorealistic, texture detail, bokeh,
-  depth of field, motion blur, soft lighting, noise, film grain, glitter, sparkle, grunge,
-  dark background, black background"""
+- Always output exactly these keywords, nothing more nothing less:
+  photograph, photo, realistic, 3D render, CGI, studio shot, real object,
+  neon colors, oversaturated, shadows, gradients, shading, glow, photorealistic,
+  texture detail, bokeh, motion blur, noise, film grain, dark background"""
 
 
 def parse_refined_prompt(response: str) -> tuple[str, str]:
