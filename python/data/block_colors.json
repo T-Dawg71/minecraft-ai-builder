@@ -53,9 +53,9 @@
     "id": "minecraft:lime_wool",
     "name": "Lime Wool",
     "rgb": [
-      112,
-      185,
-      25
+      113,
+      187,
+      27
     ],
     "category": "wool"
   },
@@ -143,9 +143,9 @@
     "id": "minecraft:red_wool",
     "name": "Red Wool",
     "rgb": [
-      161,
-      39,
-      34
+      160,
+      40,
+      35
     ],
     "category": "wool"
   },
@@ -213,8 +213,8 @@
     "id": "minecraft:lime_concrete",
     "name": "Lime Concrete",
     "rgb": [
-      94,
-      168,
+      95,
+      169,
       24
     ],
     "category": "concrete"
@@ -304,8 +304,8 @@
     "name": "Red Concrete",
     "rgb": [
       142,
-      32,
-      32
+      33,
+      33
     ],
     "category": "concrete"
   },
@@ -703,9 +703,9 @@
     "id": "minecraft:lime_concrete_powder",
     "name": "Lime Concrete Powder",
     "rgb": [
-      123,
-      189,
-      41
+      125,
+      191,
+      42
     ],
     "category": "concrete_powder"
   },
@@ -1653,9 +1653,9 @@
     "id": "minecraft:emerald_block",
     "name": "Emerald Block",
     "rgb": [
-      42,
-      176,
-      66
+      79,
+      188,
+      73
     ],
     "category": "mineral"
   },
@@ -1673,9 +1673,9 @@
     "id": "minecraft:redstone_block",
     "name": "Redstone Block",
     "rgb": [
-      171,
-      28,
-      9
+      175,
+      26,
+      5
     ],
     "category": "mineral"
   },
@@ -1993,9 +1993,9 @@
     "id": "minecraft:slime_block",
     "name": "Slime Block",
     "rgb": [
-      111,
-      192,
-      91
+      109,
+      182,
+      108
     ],
     "category": "misc"
   },

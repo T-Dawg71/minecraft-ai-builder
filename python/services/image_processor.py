@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Sequence
 
 import numpy as np
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 from services.color_matcher import BlockColorMatcher
 
@@ -110,6 +110,46 @@ def adjust_brightness_contrast(
     return normalized
 
 
+def flatten_for_blocks(image: Image.Image) -> Image.Image:
+    """
+    Crush gradients and shading out of an SD-generated image before block mapping.
+
+    This is the key step that makes block conversion accurate. SD images always
+    contain gradients, soft shadows, and shading that cause nearby pixels to map
+    to wildly different blocks. This function:
+
+    1. Boosts contrast aggressively to push colors toward their dominant hue
+    2. Boosts saturation so muted SD colors map to the right block category
+    3. Posterizes to reduce the number of distinct tones (crushes gradients into
+       flat regions), making large areas map to a single consistent block
+    4. Applies a slight median filter to remove noise/speckle pixels that would
+       otherwise map to random wrong blocks
+
+    Args:
+        image: RGB PIL image fresh from SD (pre-resize is fine).
+
+    Returns:
+        Flattened RGB image ready for quantization.
+    """
+    # Step 1: auto-normalize the tonal range first
+    result = ImageOps.autocontrast(image, cutoff=1)
+
+    # Step 2: boost contrast hard — pushes colors away from mid-tones
+    result = ImageEnhance.Contrast(result).enhance(2.0)
+
+    # Step 3: boost saturation so colors are vivid enough to match correct block category
+    result = ImageEnhance.Color(result).enhance(1.8)
+
+    # Step 4: posterize — reduce each channel to N bits, crushing gradients into flat bands
+    # 4 bits = 16 levels per channel, enough to preserve color variety while killing gradients
+    result = ImageOps.posterize(result, bits=4)
+
+    # Step 5: median filter to kill isolated noise pixels before quantization
+    result = result.filter(ImageFilter.MedianFilter(size=3))
+
+    return result
+
+
 def _quantize_without_dithering(image: Image.Image, matcher: BlockColorMatcher) -> Image.Image:
     """Quantize using batch nearest-color lookups for performance."""
     pixels = np.array(image, dtype=np.uint8)
@@ -180,12 +220,26 @@ def preprocess_image(
     brightness: float = 1.0,
     contrast: float = 1.0,
 ) -> Image.Image:
-    """Run the full preprocessing pipeline: adjust -> resize -> quantize."""
+    """
+    Run the full preprocessing pipeline: adjust -> flatten -> resize -> quantize.
+
+    The flatten step is the key addition — it crushes SD-generated gradients and
+    shading into flat color regions before the block mapper runs, dramatically
+    improving color accuracy.
+    """
+    # Manual brightness/contrast adjustments first (user-controlled)
     adjusted = adjust_brightness_contrast(
         image,
         brightness=brightness,
         contrast=contrast,
         auto_adjust=auto_adjust,
     )
-    resized = resize_image(adjusted, target_width, target_height)
+
+    # Flatten gradients — most important step for SD image accuracy
+    flattened = flatten_for_blocks(adjusted)
+
+    # Resize to target block grid dimensions
+    resized = resize_image(flattened, target_width, target_height)
+
+    # Quantize to Minecraft block colors
     return quantize_colors(resized, palette, dithering=dithering)
