@@ -53,10 +53,12 @@ class RefinePromptRequest(BaseModel):
 class RefinePromptResponse(BaseModel):
     original: str
     refined: str
+    negative: str  # NEW: negative prompt returned alongside positive
 
 
 class GenerateImageRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=2000)
+    negative_prompt: str | None = Field(default=None, max_length=2000)  # NEW
     width: int | None = Field(default=None, gt=0, le=2048)
     height: int | None = Field(default=None, gt=0, le=2048)
 
@@ -175,8 +177,13 @@ async def health_check():
 @app.post("/refine-prompt", response_model=RefinePromptResponse)
 async def refine_prompt_endpoint(request: RefinePromptRequest):
     try:
-        refined = refine_prompt(request.description)
-        return RefinePromptResponse(original=request.description, refined=refined)
+        # refine_prompt now returns (positive, negative) tuple
+        positive, negative = refine_prompt(request.description)
+        return RefinePromptResponse(
+            original=request.description,
+            refined=positive,
+            negative=negative,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except ConnectionError as e:
@@ -192,7 +199,12 @@ async def generate_image_endpoint(request: GenerateImageRequest):
     width = request.width if request.width is not None else DEFAULT_WIDTH
     height = request.height if request.height is not None else DEFAULT_HEIGHT
     try:
-        image_bytes = generate_image(request.prompt, width=width, height=height)
+        image_bytes = generate_image(
+            request.prompt,
+            negative_prompt=request.negative_prompt,  # NEW: pass through to SD
+            width=width,
+            height=height,
+        )
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
         return GenerateImageResponse(image=image_b64)
     except ValueError as e:
