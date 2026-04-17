@@ -23,15 +23,22 @@ SD_TXT2IMG_URL: Final[str] = f"{SD_API_HOST}{SD_TXT2IMG_PATH}"
 DEFAULT_STEPS: Final[int] = 25
 DEFAULT_SAMPLER_NAME: Final[str] = "DPM++ 2M Karras"
 DEFAULT_CFG_SCALE: Final[float] = 9
+SAFE_STEPS: Final[int] = 18
+SAFE_SAMPLER_NAME: Final[str] = "Euler a"
+SAFE_CFG_SCALE: Final[float] = 7
 DEFAULT_WIDTH: Final[int] = 512
 DEFAULT_HEIGHT: Final[int] = 512
-REQUEST_TIMEOUT_SECONDS: Final[int] = 120
+REQUEST_TIMEOUT_SECONDS: Final[int] = 600
 
 DEFAULT_NEGATIVE_PROMPT: Final[str] = (
     "shadows, gradients, shading, glow, bloom, fog, mist, photorealistic, "
     "texture detail, fur, fabric weave, wood grain, bokeh, depth of field, "
     "motion blur, soft lighting, atmospheric haze, subsurface scattering, "
     "noise, film grain"
+)
+
+SAFE_NEGATIVE_PROMPT: Final[str] = (
+    "photo, realistic, photorealistic, dark background, shadows, blur"
 )
 
 
@@ -45,6 +52,14 @@ class SDServiceUnavailableError(SDServiceError):
 
 class SDServiceTimeoutError(SDServiceError):
     """Raised when image generation exceeds timeout."""
+
+
+def _is_simple_subject_prompt(prompt: str) -> bool:
+    """Heuristic for short prompts like 'blue flower' that need safer SD settings."""
+    normalized = prompt.strip().lower()
+    token_count = len([token for token in normalized.replace(",", " ").split() if token])
+    comma_count = normalized.count(",")
+    return token_count <= 10 and comma_count <= 4
 
 
 def generate_image(
@@ -71,14 +86,26 @@ def generate_image(
     if width <= 0 or height <= 0:
         raise ValueError("Width and height must be positive")
 
-    resolved_negative = (negative_prompt or "").strip() or DEFAULT_NEGATIVE_PROMPT
+    use_safe_profile = _is_simple_subject_prompt(prompt)
+
+    if use_safe_profile:
+        # For simple prompts, avoid over-constraining negatives and aggressive cfg.
+        resolved_negative = SAFE_NEGATIVE_PROMPT
+        steps = SAFE_STEPS
+        sampler_name = SAFE_SAMPLER_NAME
+        cfg_scale = SAFE_CFG_SCALE
+    else:
+        resolved_negative = (negative_prompt or "").strip() or DEFAULT_NEGATIVE_PROMPT
+        steps = DEFAULT_STEPS
+        sampler_name = DEFAULT_SAMPLER_NAME
+        cfg_scale = DEFAULT_CFG_SCALE
 
     payload = {
         "prompt": prompt.strip(),
         "negative_prompt": resolved_negative,
-        "steps": DEFAULT_STEPS,
-        "sampler_name": DEFAULT_SAMPLER_NAME,
-        "cfg_scale": DEFAULT_CFG_SCALE,
+        "steps": steps,
+        "sampler_name": sampler_name,
+        "cfg_scale": cfg_scale,
         "width": width,
         "height": height,
     }

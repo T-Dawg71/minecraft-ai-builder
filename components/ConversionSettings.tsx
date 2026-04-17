@@ -250,8 +250,8 @@ function toPaletteBlocks(palette: BlockPalette): ConversionPaletteBlock[] {
 }
 
 export const DEFAULT_SETTINGS: ConversionSettingsData = {
-  gridWidth:     64,
-  gridHeight:    64,
+  gridWidth:     32,
+  gridHeight:    32,
   palette:       toPaletteBlocks(PRESETS[0]),
   palettePreset: PRESETS[0].name,
   mapArtMode:    false,

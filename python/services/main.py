@@ -18,7 +18,7 @@ from services.export_utils import (
     render_preview_image,
 )
 from services.history_service import save_generation, get_history, get_entry, delete_entry, clear_history
-from services.image_processor import preprocess_image
+from services.image_processor import _normalize_palette, preprocess_image
 from services.ollama_service import refine_prompt
 from services.sd_service import (
     DEFAULT_HEIGHT,
@@ -73,6 +73,8 @@ class ConvertToBlocksRequest(BaseModel):
     height: int = Field(..., gt=0, le=2048)
     palette: str | list[dict[str, Any]] | list[list[int]] = Field(default="full")
     dithering: bool = False
+    brightness: int = Field(default=0, ge=-100, le=100)
+    contrast: int = Field(default=0, ge=-100, le=100)
 
 
 class BlockDimensions(BaseModel):
@@ -121,7 +123,16 @@ def _decode_base64_image(image_base64: str) -> Image.Image:
     except (binascii.Error, ValueError) as exc:
         raise ValueError("image_base64 must contain valid base64-encoded image data") from exc
     try:
-        return Image.open(BytesIO(image_bytes)).convert("RGB")
+        image = Image.open(BytesIO(image_bytes))
+
+        # Preserve visible content for transparent outputs. Direct RGBA->RGB may
+        # collapse transparent regions to black, causing black-block maps.
+        if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
+            rgba = image.convert("RGBA")
+            background = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+            image = Image.alpha_composite(background, rgba)
+
+        return image.convert("RGB")
     except (UnidentifiedImageError, OSError) as exc:
         raise ValueError("image_base64 must decode to a valid image file") from exc
 
@@ -132,19 +143,115 @@ def _encode_preview_image(image: Image.Image) -> str:
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 
+def _rgb_luminance(rgb: list[int] | tuple[int, int, int]) -> float:
+    red, green, blue = rgb
+    return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue)
+
+
+def _is_dark_block_id(block_id: str) -> bool:
+    lowered = block_id.lower()
+    return any(
+        token in lowered
+        for token in ("black_wool", "black_concrete", "black_terracotta", "blackstone", "obsidian")
+    )
+
+
+def _build_safe_palette(palette_input: str | list[dict[str, Any]] | list[list[int]]) -> list[dict[str, Any]]:
+    normalized = _normalize_palette(palette_input)
+    filtered = [
+        block
+        for block in normalized
+        if _rgb_luminance(block["rgb"]) >= 42 and not _is_dark_block_id(block["id"])
+    ]
+
+    if len(filtered) < 8:
+        filtered = sorted(normalized, key=lambda block: _rgb_luminance(block["rgb"]), reverse=True)[:24]
+
+    return filtered
+
+
 def _build_block_conversion_result(
     request: ConvertToBlocksRequest,
     output_format: Literal["grid", "preview"],
 ) -> dict[str, Any]:
     image = _decode_base64_image(request.image_base64)
+    brightness_factor = max(0.0, 1.0 + (request.brightness / 100.0))
+    contrast_factor = max(0.0, 1.0 + (request.contrast / 100.0))
+
     processed_image = preprocess_image(
         image,
         target_width=request.width,
         target_height=request.height,
         palette=request.palette,
         dithering=request.dithering,
+        brightness=brightness_factor,
+        contrast=contrast_factor,
     )
     block_grid = image_to_block_grid(processed_image, request.palette)
+
+    total_blocks = block_grid.width * block_grid.height
+    if block_grid.palette_used and total_blocks > 0:
+        dominant_block_id, dominant_count = max(
+            block_grid.palette_used.items(),
+            key=lambda item: item[1],
+        )
+        dominant_ratio = dominant_count / total_blocks
+        is_dark_dominant = _is_dark_block_id(dominant_block_id)
+
+        # Recovery path 1: auto-adjust with stronger brightness/contrast.
+        if is_dark_dominant and dominant_ratio >= 0.95:
+            recovered_image = preprocess_image(
+                image,
+                target_width=request.width,
+                target_height=request.height,
+                palette=request.palette,
+                dithering=request.dithering,
+                auto_adjust=True,
+                brightness=max(brightness_factor, 1.35),
+                contrast=max(contrast_factor, 1.45),
+            )
+            recovered_grid = image_to_block_grid(recovered_image, request.palette)
+
+            if recovered_grid.palette_used:
+                recovered_block_id, recovered_count = max(
+                    recovered_grid.palette_used.items(),
+                    key=lambda item: item[1],
+                )
+                recovered_ratio = recovered_count / total_blocks
+                recovered_is_dark = _is_dark_block_id(recovered_block_id)
+
+                if (not recovered_is_dark) or (recovered_ratio < dominant_ratio):
+                    processed_image = recovered_image
+                    block_grid = recovered_grid
+                    dominant_ratio = recovered_ratio
+                    is_dark_dominant = recovered_is_dark
+
+        # Recovery path 2: filtered safe palette that excludes ultra-dark blocks.
+        if is_dark_dominant and dominant_ratio >= 0.95:
+            safe_palette = _build_safe_palette(request.palette)
+            safe_image = preprocess_image(
+                image,
+                target_width=request.width,
+                target_height=request.height,
+                palette=safe_palette,
+                dithering=request.dithering,
+                auto_adjust=True,
+                brightness=max(brightness_factor, 1.5),
+                contrast=max(contrast_factor, 1.6),
+            )
+            safe_grid = image_to_block_grid(safe_image, safe_palette)
+
+            if safe_grid.palette_used:
+                safe_block_id, safe_count = max(
+                    safe_grid.palette_used.items(),
+                    key=lambda item: item[1],
+                )
+                safe_ratio = safe_count / total_blocks
+                safe_is_dark = _is_dark_block_id(safe_block_id)
+
+                if (not safe_is_dark) or (safe_ratio < dominant_ratio):
+                    processed_image = safe_image
+                    block_grid = safe_grid
 
     response: dict[str, Any] = {
         "dimensions": {"width": block_grid.width, "height": block_grid.height},

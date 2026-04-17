@@ -14,7 +14,6 @@ import ImageEditor from "@/components/ImageEditor";
 export default function Home() {
   const {
     input,
-    refinedPrompt,
     imageBase64,
     blockData,
     step,
@@ -62,16 +61,6 @@ export default function Home() {
         />
         {step !== "idle" && (
           <PipelineStatus step={step} errorMessage={error} onRetry={retry} />
-        )}
-        {refinedPrompt && (
-          <div>
-            <h2 className="text-xs font-mono text-stone-400 uppercase tracking-widest mb-1">
-              Refined Prompt
-            </h2>
-            <p className="text-stone-300 text-sm font-mono bg-stone-800 border border-stone-700 rounded-md px-3 py-2 leading-relaxed">
-              {refinedPrompt}
-            </p>
-          </div>
         )}
         <ConversionSettings
           settings={settings}

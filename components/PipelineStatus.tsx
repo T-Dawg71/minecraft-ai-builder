@@ -2,7 +2,6 @@
 
 export type PipelineStep =
   | "idle"
-  | "refining"
   | "generating"
   | "converting"
   | "done"
@@ -15,13 +14,12 @@ interface PipelineStatusProps {
 }
 
 const STEPS: { key: PipelineStep; label: string }[] = [
-  { key: "refining",   label: "Refining prompt"     },
   { key: "generating", label: "Generating image"     },
   { key: "converting", label: "Converting to blocks" },
   { key: "done",       label: "Done"                 },
 ];
 
-const ORDER: PipelineStep[] = ["refining", "generating", "converting", "done"];
+const ORDER: PipelineStep[] = ["generating", "converting", "done"];
 
 function stepIndex(step: PipelineStep) {
   return ORDER.indexOf(step);
@@ -34,7 +32,7 @@ export default function PipelineStatus({
 }: PipelineStatusProps) {
   if (step === "idle") return null;
 
-  const currentIndex = stepIndex(step === "error" ? "refining" : step);
+  const currentIndex = stepIndex(step === "error" ? "generating" : step);
 
   return (
     <div className="w-full rounded-md border-2 border-mc-stone-300 bg-mc-stone-100 p-4 font-mono text-sm">
