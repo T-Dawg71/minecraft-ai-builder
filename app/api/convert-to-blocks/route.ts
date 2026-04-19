@@ -22,7 +22,7 @@ function getBlockColorMap(): Record<string, number[]> {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { image_base64, width, height, palette, dithering } = body;
+    const { image_base64, width, height, palette, dithering, brightness, contrast } = body;
 
     if (!image_base64 || typeof image_base64 !== "string") {
       return NextResponse.json(
@@ -36,10 +36,12 @@ export async function POST(req: NextRequest) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         image_base64,
-        width: width || 64,
-        height: height || 64,
+        width: width || 32,
+        height: height || 32,
         palette: palette || "full",
         dithering: dithering || false,
+        brightness: typeof brightness === "number" ? brightness : 0,
+        contrast: typeof contrast === "number" ? contrast : 0,
       }),
     });
 

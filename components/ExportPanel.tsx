@@ -62,7 +62,7 @@ function estimateExportSize(
 
 export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = false }: ExportPanelProps) {
   const [isOpen, setIsOpen] = useState(true);
-  const [format, setFormat] = useState<ExportFormat>("schem");
+  const [format, setFormat] = useState<ExportFormat>("nbt");
   const [orientation, setOrientation] = useState<Orientation>("floor");
   const [depth, setDepth] = useState(Math.min(10, Math.max(1, initialDepth)));
   const [activeDownload, setActiveDownload] = useState<DownloadAction | null>(null);

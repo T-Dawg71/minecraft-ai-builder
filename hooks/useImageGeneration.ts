@@ -4,6 +4,9 @@ import type { BlockGridData } from "@/components/BlockPreview";
 import type { ConversionSettingsData } from "@/components/ConversionSettings";
 import { DEFAULT_SETTINGS } from "@/components/ConversionSettings";
 
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
 interface GenerationState {
   input: string;
   refinedPrompt: string;
@@ -144,40 +147,26 @@ export function useImageGeneration() {
       if (!input.trim()) return;
 
       const activeSettings = state.settings;
-      setPartial({ isLoading: true, error: "", step: "refining", input, blockData: null });
+      const promptToGenerate = input.trim();
+      const negative = "";
+      setPartial({
+        isLoading: true,
+        error: "",
+        step: "generating",
+        input,
+        blockData: null,
+        refinedPrompt: promptToGenerate,
+        negativePrompt: negative,
+      });
 
-      // --- Step 1: refine prompt ---
-      let refined = "";
-      let negative = ""; // NEW
-      try {
-        const res = await fetch("/api/refine-prompt", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ description: input }),
-        });
-        if (!res.ok) throw new Error(`Refine failed: ${res.status}`);
-        const data = await res.json();
-        refined = data.refinedPrompt ?? data.refined_prompt ?? data.result ?? data.refined ?? "";
-        negative = data.negative ?? ""; // NEW
-        if (!refined) throw new Error("No refined prompt returned.");
-        setPartial({ refinedPrompt: refined, negativePrompt: negative, step: "generating" }); // NEW: store negative
-      } catch (err) {
-        setPartial({
-          step: "error",
-          isLoading: false,
-          error: err instanceof Error ? err.message : "Failed to refine prompt.",
-        });
-        return;
-      }
-
-      // --- Step 2: generate image ---
+      // --- Step 1: generate image ---
       let imageBase64 = "";
       try {
-        const res = await fetch("/api/generate-image", {
+        const res = await fetch(`/api/generate-image`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            prompt: refined,
+            prompt: promptToGenerate,
             negative_prompt: negative || undefined, // NEW: pass negative to SD
           }),
         });
@@ -195,8 +184,8 @@ export function useImageGeneration() {
         return;
       }
 
-      // --- Step 3: convert to blocks ---
-      await convertToBlocks(imageBase64, activeSettings, input, refined);
+      // --- Step 2: convert to blocks ---
+      await convertToBlocks(imageBase64, activeSettings, input, promptToGenerate);
     },
     [state.settings, convertToBlocks]
   );
