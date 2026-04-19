@@ -6,6 +6,7 @@ import ConversionSettings from "@/components/ConversionSettings";
 import ExportPanel from "@/components/ExportPanel";
 import ImportGuide from "@/components/ImportGuide";
 import VersionCompatibility, { MinecraftVersion } from "@/components/VersionCompatibility";
+import SkeletonLoader from "@/components/SkeletonLoader";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { useState } from "react";
 import HistoryGallery from "@/components/HistoryGallery";
@@ -41,12 +42,14 @@ export default function Home() {
   const conversionSourceImage = editedImageBase64 || imageBase64 || "";
   const previewImage = editedImageBase64 || imageBase64 || null;
 
+  const isGenerating = isLoading || isConverting;
+  const showSkeleton = isGenerating && !blockData;
   const showComparison = !!(imageBase64 || blockData);
 
   return (
     <main className="flex flex-col lg:flex-row flex-wrap gap-6 px-4 py-10 max-w-7xl mx-auto w-full">
       <div className="lg:w-1/3 space-y-6">
-        <h1 className="text-3xl font-bold font-mono text-mc-green tracking-wide uppercase">
+        <h1 className="text-3xl font-bold font-mono text-mc-grass-500 tracking-wide uppercase">
           Minecraft Creator
         </h1>
         <PromptInput
@@ -85,7 +88,12 @@ export default function Home() {
           disabled={isConverting}
           onEditedImageChange={setEditedImageBase64}
         />
-        {showComparison ? (
+
+        {/* Skeleton while generating before first result */}
+        {showSkeleton && <SkeletonLoader />}
+
+        {/* Comparison view — shown once we have an image or block data */}
+        {!showSkeleton && showComparison && (
           <>
             <ComparisonView
               imageBase64={previewImage}
@@ -100,7 +108,10 @@ export default function Home() {
               />
             )}
           </>
-        ) : (
+        )}
+
+        {/* Empty state */}
+        {!showSkeleton && !showComparison && (
           <div className="bg-stone-800 rounded-lg border border-stone-700 p-8 min-h-[400px] flex items-center justify-center">
             <p className="text-stone-500 text-sm font-mono text-center">
               Enter a description and click Generate to see your creation
