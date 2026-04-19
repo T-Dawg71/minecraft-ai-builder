@@ -162,7 +162,7 @@ export function useImageGeneration() {
       // --- Step 1: generate image ---
       let imageBase64 = "";
       try {
-        const res = await fetch(`${BACKEND_URL}/generate-image`, {
+        const res = await fetch(`/api/generate-image`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
