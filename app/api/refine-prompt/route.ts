@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 const MAX_DESCRIPTION_LENGTH = 500;
 
 export async function POST(request: NextRequest) {
@@ -8,7 +7,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { description } = body;
 
-    // Input validation
     if (!description || typeof description !== 'string') {
       return NextResponse.json(
         { error: 'Description is required and must be a string' },
@@ -32,23 +30,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Python backend
-    const response = await fetch(`${BACKEND_URL}/refine-prompt`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: trimmed }),
+    // Pass the user's input directly to SD — no Ollama refinement.
+    // Per professor feedback: keep it simple, let the model work from
+    // the raw text input rather than over-engineering the prompt.
+    return NextResponse.json({
+      original: trimmed,
+      refined: trimmed,
+      negative: "photograph, photo, realistic, 3D render, CGI, intricate, detailed, ornate, decorative, mandala, complex, pattern, busy, shadows, gradients, shading, glow, photorealistic, noise, film grain, dark background",
     });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return NextResponse.json(
-        { error: errorData.detail || 'Failed to refine prompt' },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
 
   } catch (error) {
     if (error instanceof SyntaxError) {
@@ -59,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Internal server error. Is the backend running?' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
