@@ -4,13 +4,10 @@ import type { BlockGridData } from "@/components/BlockPreview";
 import type { ConversionSettingsData } from "@/components/ConversionSettings";
 import { DEFAULT_SETTINGS } from "@/components/ConversionSettings";
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-
 interface GenerationState {
   input: string;
   refinedPrompt: string;
-  negativePrompt: string; // NEW
+  negativePrompt: string;
   imageBase64: string;
   blockData: BlockGridData | null;
   step: PipelineStep;
@@ -20,10 +17,10 @@ interface GenerationState {
   settings: ConversionSettingsData;
 }
 
-const INITIAL: GenerationState = {
+const makeInitial = (): GenerationState => ({
   input: "",
   refinedPrompt: "",
-  negativePrompt: "", // NEW
+  negativePrompt: "",
   imageBase64: "",
   blockData: null,
   step: "idle",
@@ -31,10 +28,36 @@ const INITIAL: GenerationState = {
   isConverting: false,
   error: "",
   settings: DEFAULT_SETTINGS,
-};
+});
+
+// Translate raw HTTP/network errors into friendly messages
+function friendlyError(err: unknown, context: "image" | "convert"): string {
+  const msg = err instanceof Error ? err.message : String(err);
+
+  if (msg.includes("503") || msg.toLowerCase().includes("unavailable")) {
+    return context === "image"
+      ? "Stable Diffusion is not running. Please start the SD service and try again."
+      : "The backend service is unavailable. Please make sure it is running.";
+  }
+  if (msg.includes("504") || msg.toLowerCase().includes("timeout")) {
+    return context === "image"
+      ? "Image generation timed out. SD may be busy — please try again."
+      : "Block conversion timed out. Try a smaller grid size.";
+  }
+  if (msg.includes("500")) {
+    return context === "image"
+      ? "Something went wrong generating the image. Please try again."
+      : "Something went wrong converting to blocks. Please try again.";
+  }
+  if (msg.toLowerCase().includes("failed to fetch") || msg.toLowerCase().includes("networkerror")) {
+    return "Cannot reach the server. Please check that the backend is running on port 8000.";
+  }
+  // Fall back to the raw message if we don't recognise it
+  return msg;
+}
 
 export function useImageGeneration() {
-  const [state, setState] = useState<GenerationState>(INITIAL);
+  const [state, setState] = useState<GenerationState>(makeInitial);
 
   const setPartial = (patch: Partial<GenerationState>) =>
     setState((prev) => ({ ...prev, ...patch }));
@@ -92,7 +115,6 @@ export function useImageGeneration() {
                   colorsMap[block.id] = block.rgb;
                 }
               }
-              console.log("After update, lime_wool:", colorsMap["minecraft:lime_wool"]);
             }
           } catch {
             // Fall back to placeholders
@@ -106,12 +128,6 @@ export function useImageGeneration() {
           blockCount: data.block_count,
           paletteSummary: data.palette_summary,
         };
-
-        console.log("Debug colors:", JSON.stringify({
-          gridSample: data.grid?.[0]?.slice(0, 3),
-          hasColors: !!data.colors,
-          colorMatch: data.colors?.[data.grid?.[0]?.[0]],
-        }));
 
         setPartial({ blockData, step: "done", isConverting: false, isLoading: false });
 
@@ -135,7 +151,7 @@ export function useImageGeneration() {
           step: "error",
           isConverting: false,
           isLoading: false,
-          error: err instanceof Error ? err.message : "Failed to convert to blocks.",
+          error: friendlyError(err, "convert"),
         });
       }
     },
@@ -148,7 +164,8 @@ export function useImageGeneration() {
 
       const activeSettings = state.settings;
       const promptToGenerate = input.trim();
-      const negative = "";
+      const negative = "photograph, photo, realistic, 3D render, CGI, intricate, detailed, ornate, decorative, mandala, complex, pattern, busy, shadows, gradients, shading, glow, photorealistic, noise, film grain, dark background";
+
       setPartial({
         isLoading: true,
         error: "",
@@ -159,15 +176,15 @@ export function useImageGeneration() {
         negativePrompt: negative,
       });
 
-      // --- Step 1: generate image ---
+      // --- Generate image ---
       let imageBase64 = "";
       try {
-        const res = await fetch(`/api/generate-image`, {
+        const res = await fetch("/api/generate-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             prompt: promptToGenerate,
-            negative_prompt: negative || undefined, // NEW: pass negative to SD
+            negative_prompt: negative,
           }),
         });
         if (!res.ok) throw new Error(`Image generation failed: ${res.status}`);
@@ -179,12 +196,12 @@ export function useImageGeneration() {
         setPartial({
           step: "error",
           isLoading: false,
-          error: err instanceof Error ? err.message : "Failed to generate image.",
+          error: friendlyError(err, "image"),
         });
         return;
       }
 
-      // --- Step 2: convert to blocks ---
+      // --- Convert to blocks ---
       await convertToBlocks(imageBase64, activeSettings, input, promptToGenerate);
     },
     [state.settings, convertToBlocks]
@@ -208,7 +225,10 @@ export function useImageGeneration() {
     if (state.input) run(state.input);
   }, [state.input, run]);
 
-  const reset = useCallback(() => setState(INITIAL), []);
+  // Preserve the user's palette/settings across reset
+  const reset = useCallback(() =>
+    setState(prev => ({ ...makeInitial(), settings: prev.settings })),
+  []);
 
   return { ...state, run, retry, reset, reconvert, updateSettings, setInput };
 }
