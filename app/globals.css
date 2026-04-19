@@ -48,3 +48,8 @@ body {
 * {
   border-color: var(--color-mc-stone-300);
 }
+
+[data-theme="dark"] {
+  --background: #1a1a18;
+  --foreground: #e8e6e0;
+}
