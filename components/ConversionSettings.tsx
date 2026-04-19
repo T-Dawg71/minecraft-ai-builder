@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 
 // ── Palette definitions ───────────────────────────────────────────────────────
 
@@ -109,7 +109,6 @@ export const PRESETS: BlockPalette[] = [FULL_PALETTE];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type GridSize = 32 | 64 | 128 | 256 | "custom";
 export type DepthMode = "flat" | "relief";
 
 export interface ConversionConfig {
@@ -198,62 +197,13 @@ export default function ConversionSettings({
   hasBlockData,
   isConverting,
 }: ConversionSettingsProps) {
-  const [customSize, setCustomSize] = useState(String(settings.gridWidth));
-
   const patch = useCallback(
     (p: Partial<ConversionSettingsData>) => onSettingsChange({ ...settings, ...p }),
     [settings, onSettingsChange]
   );
 
-  const sizeSelect: GridSize =
-    settings.gridWidth === settings.gridHeight &&
-    [32, 64, 128, 256].includes(settings.gridWidth as 32 | 64 | 128 | 256)
-      ? (settings.gridWidth as 32 | 64 | 128 | 256)
-      : "custom";
-
-  const handleSizeChange = (val: GridSize) => {
-    if (val !== "custom") {
-      patch({ gridWidth: val, gridHeight: val });
-      setCustomSize(String(val));
-    }
-  };
-
-  const handleCustomSize = (raw: string) => {
-    setCustomSize(raw);
-    const n = parseInt(raw, 10);
-    if (!isNaN(n) && n >= 8 && n <= 512) patch({ gridWidth: n, gridHeight: n });
-  };
-
   return (
     <div className="flex flex-col gap-4 w-full font-mono text-sm rounded-md border-2 border-mc-stone-300 bg-mc-stone-100 p-4">
-
-      {/* ── Grid size ── */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-mc-stone-500 uppercase tracking-widest">Grid Size</label>
-        <div className="flex gap-2 flex-wrap">
-          {([32, 64, 128, 256, "custom"] as GridSize[]).map(s => (
-            <button
-              key={s}
-              onClick={() => handleSizeChange(s)}
-              className={`px-3 py-1 rounded border text-xs transition-colors ${
-                sizeSelect === s
-                  ? "bg-mc-grass-500 border-mc-grass-500 text-white"
-                  : "border-mc-stone-300 hover:bg-mc-stone-200 text-mc-stone-800"
-              }`}
-            >
-              {s === "custom" ? "Custom" : `${s}×${s}`}
-            </button>
-          ))}
-        </div>
-        {sizeSelect === "custom" && (
-          <input
-            type="number" min={8} max={512} value={customSize}
-            onChange={e => handleCustomSize(e.target.value)}
-            placeholder="8–512"
-            className="mt-1 w-28 rounded border border-mc-stone-300 bg-white px-2 py-1 text-xs focus:outline-none focus:border-mc-grass-500"
-          />
-        )}
-      </div>
 
       {/* ── Dithering ── */}
       <div className="flex items-center justify-between">
