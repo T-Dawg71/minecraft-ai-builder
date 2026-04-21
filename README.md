@@ -1,37 +1,30 @@
 # Minecraft AI Image-to-Blocks Generator
 
-An AI-powered tool that converts text descriptions into Minecraft block patterns. Type a description, the AI refines it, generates an image, and converts it to Minecraft blocks you can import into your world.
+An AI-powered tool that converts text descriptions into Minecraft block patterns. Type a description, Stable Diffusion generates an image, and the system converts it to Minecraft blocks you can import directly into your world.
 
 ## Tech Stack
 
-- **Frontend:** Next.js 16 (React, TypeScript, Tailwind CSS)
-- **NLP Processing:** Ollama + Llama 3
+- **Frontend:** Next.js 16 (React, TypeScript, Tailwind CSS v4)
 - **Image Generation:** Stable Diffusion 1.5 (local, via WebUI Forge)
 - **Block Mapping:** Python (FastAPI, NumPy, SciPy)
 - **Minecraft Export:** WorldEdit (.schem) / Structure Blocks (.nbt)
 - **History Storage:** SQLite (via Python backend)
+
+> **Note:** Ollama/Llama 3 is installed but no longer active in the pipeline. User input is passed directly to Stable Diffusion for simplicity and reliability.
+
+---
 
 ## Prerequisites
 
 - **Node.js 22+** — `node -v`
 - **Python 3.13+** — for the backend — `python3 --version`
 - **Python 3.10** — required for Stable Diffusion — `brew install python@3.10`
-- **Ollama** — `brew install ollama`
 - **Git** — `git --version`
 - **Homebrew** (Mac) — for installing dependencies
 
+---
+
 ## First Time Setup
-
-### Compressed info:
-
-# Terminal 1 — Ollama
-ollama serve
-# bash# Terminal 2 — Stable Diffusion
-cd ~/stable-diffusion-webui-forge && source venv/bin/activate && ./webui.sh --api --listen --skip-torch-cuda-test
-# bash# Terminal 3 — Python Backend
-cd ~/minecraft-ai-builder/python && source venv/bin/activate && uvicorn services.main:app --reload
-# bash# Terminal 4 — Next.js Frontend
-cd ~/minecraft-ai-builder && npm run dev
 
 ### 1. Clone the Repo
 ```bash
@@ -53,14 +46,7 @@ pip install -r requirements.txt
 cd ..
 ```
 
-### 4. Install Ollama and Pull Llama 3
-```bash
-brew install ollama
-ollama pull llama3
-```
-Downloads ~4.7 GB. Only needed once.
-
-### 5. Install Stable Diffusion (WebUI Forge)
+### 4. Install Stable Diffusion (WebUI Forge)
 ```bash
 cd ~
 git clone https://github.com/lllyasviel/stable-diffusion-webui-forge.git
@@ -71,59 +57,87 @@ pip install setuptools==69.5.1
 pip install git+https://github.com/openai/CLIP.git
 ```
 
-### 6. Download the SD Model
+### 5. Download the SD Model
 ```bash
 curl -L "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors" \
   -o ~/stable-diffusion-webui-forge/models/Stable-diffusion/v1-5-pruned-emaonly.safetensors
 ```
 Downloads ~4 GB. Only needed once.
 
+### 6. (Optional) Install Ollama
+Ollama is included in the codebase but is not active in the current pipeline.
+```bash
+brew install ollama
+ollama pull llama3
+```
+
 ---
 
 ## Running the Application
 
-Open **4 terminal windows** and run each command:
+Open **3 terminal windows** (Ollama is optional):
 
-### Terminal 1 — Ollama
-```bash
-ollama serve
-```
-"Address already in use" means it's already running — that's fine.
-
-### Terminal 2 — Stable Diffusion
+### Terminal 1 — Stable Diffusion
 ```bash
 cd ~/stable-diffusion-webui-forge
 source venv/bin/activate
 ./webui.sh --api --listen --skip-torch-cuda-test
 ```
-Wait for `Running on local URL: http://0.0.0.0:7860` before proceeding. First time: open `http://localhost:7860` and select the `v1-5-pruned-emaonly` checkpoint.
+Wait for `Running on local URL: http://0.0.0.0:7860` before proceeding.
+First time only: open `http://localhost:7860` and select the `v1-5-pruned-emaonly` checkpoint.
 
-### Terminal 3 — Python Backend
+### Terminal 2 — Python Backend
 ```bash
 cd ~/minecraft-ai-builder/python
 source venv/bin/activate
 uvicorn services.main:app --reload
 ```
 
-### Terminal 4 — Next.js Frontend
+### Terminal 3 — Next.js Frontend
 ```bash
 cd ~/minecraft-ai-builder
 npm run dev
 ```
 
 ### Open the App
-Go to **http://localhost:3000** and type a description like "a castle on a hill at sunset".
+Go to **http://localhost:3000** and type a description like `a castle on a hill`.
 
 ---
 
 ## How It Works
 
-1. **Refine Prompt** — Ollama/Llama 3 optimizes your description for blocky, voxel-friendly image generation
-2. **Generate Image** — Stable Diffusion generates a 512×512 image from the refined prompt
-3. **Convert to Blocks** — Each pixel is matched to the closest Minecraft block color using CIE76 Delta-E in LAB color space
-4. **Preview** — Side-by-side comparison of the original image and block preview with zoom/pan controls
-5. **Export** — Download as .schem (WorldEdit) or .nbt (vanilla structure blocks) for import into Minecraft
-6. **History** — Every generation is saved automatically. Browse past creations, remix a prompt, or delete entries from the gallery at the bottom of the page
+1. **Generate Image** — Your description is sent directly to Stable Diffusion which generates a 512×512 image
+2. **Flatten & Preprocess** — The image is contrast-boosted, posterized, and color-flattened to improve block mapping accuracy
+3. **Convert to Blocks** — Each pixel is matched to the closest Minecraft block using CIE76 Delta-E in LAB color space across 75 blocks (concrete, wool, terracotta, special blocks)
+4. **Preview** — Side-by-side comparison of the original image and block grid with zoom/pan controls
+5. **Export** — Download as `.schem` (WorldEdit) or `.nbt` (vanilla structure blocks) for import into Minecraft
+6. **History** — Every generation is saved automatically. Browse, remix, or delete past creations from the gallery
+
+---
+
+## Importing into Minecraft
+
+### WorldEdit (.schem) — Recommended
+1. Install WorldEdit mod (Fabric) for your Minecraft version
+2. Copy the `.schem` file to:
+```
+~/.minecraft/config/worldedit/schematics/
+```
+3. In-game run:
+```
+//schem load minecraft-build
+//paste
+```
+
+### Structure Blocks (.nbt) — Vanilla, no mods needed
+1. Copy the `.nbt` file to:
+```
+~/.minecraft/saves/[world]/generated/minecraft/structures/
+```
+2. Place a Structure Block in-game (`/give @s minecraft:structure_block`)
+3. Set mode to **Load**, enter the filename, click **LOAD**
+
+> Structure blocks have a 48×48×48 size limit. Use WorldEdit for larger builds.
 
 ---
 
@@ -137,7 +151,6 @@ source venv/bin/activate
 python -m pytest tests/ -v
 
 # Individual test suites
-python -m pytest tests/test_ollama_service.py -v
 python -m pytest tests/test_color_matcher.py -v
 python -m pytest tests/test_schematic_exporter.py -v
 python -m pytest tests/test_structure_exporter.py -v
@@ -145,17 +158,14 @@ python -m pytest tests/test_structure_exporter.py -v
 
 ### Manual Service Tests
 ```bash
-# Test prompt refinement (requires Ollama running)
-python -m services.ollama_service
-
 # Test color matching and benchmark
 python -m services.color_matcher
 
+# Validate block color database (should report 150+ blocks, 0 errors)
+python -m utils.validate_blocks
+
 # Test history service
 python -m services.history_service
-
-# Validate block color database
-python -m utils.validate_blocks
 ```
 
 ---
@@ -165,67 +175,93 @@ python -m utils.validate_blocks
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/health` | Health check |
-| POST | `/refine-prompt` | Refine user description via Ollama/Llama 3 |
+| POST | `/refine-prompt` | Returns input as-is (Ollama bypassed) |
 | POST | `/generate-image` | Generate image via Stable Diffusion |
 | POST | `/convert-to-blocks` | Convert image to Minecraft block grid |
+| POST | `/export/schematic` | Export block grid as .schem or .nbt |
+| POST | `/export/preview-image` | Export block grid as PNG |
+| POST | `/export/block-list` | Export block list as CSV |
 | GET | `/history` | Get paginated generation history |
 | POST | `/history` | Save a generation to history |
-| GET | `/history/{id}` | Get a single history entry with full data |
+| GET | `/history/{id}` | Get a single history entry |
 | DELETE | `/history/{id}` | Delete a single history entry |
 | DELETE | `/history` | Clear all history |
 
 ---
 
 ## Project Structure
+
 ```
 minecraft-ai-builder/
 ├── app/                          # Next.js frontend
 │   ├── api/                      # API routes (proxy to Python backend)
-│   │   ├── refine-prompt/        # Prompt refinement
-│   │   ├── generate-image/       # Image generation
-│   │   ├── convert-to-blocks/    # Block conversion
-│   │   ├── block-colors/         # Block color data
+│   │   ├── refine-prompt/        # Returns input directly (Ollama bypassed)
+│   │   ├── generate-image/       # Image generation via SD
+│   │   ├── convert-to-blocks/    # Block conversion + color map attachment
+│   │   ├── block-colors/         # Block color data from block_colors.json
+│   │   ├── export/               # Schematic, preview image, block list export
 │   │   └── history/              # Generation history (GET, POST, DELETE)
 │   │       └── [id]/             # Single entry (GET, DELETE)
 │   ├── page.tsx                  # Main application page
-│   └── layout.tsx                # App layout
+│   ├── layout.tsx                # App layout with ThemeToggle
+│   └── globals.css               # Tailwind v4 theme + dark mode variables
 ├── components/                   # React components
 │   ├── PromptInput.tsx           # Text input with character counter
 │   ├── PipelineStatus.tsx        # Step-by-step progress indicator
-│   ├── BlockPreview.tsx          # Canvas-based block grid preview
-│   ├── ComparisonView.tsx        # Side-by-side image comparison
-│   ├── ConversionSettings.tsx    # Grid size, palette, dithering controls
-│   ├── HistoryGallery.tsx        # Generation history gallery with remix/delete
+│   ├── BlockPreview.tsx          # Canvas-based block grid renderer
+│   ├── ComparisonView.tsx        # Side-by-side image vs block preview
+│   ├── ConversionSettings.tsx    # Dithering, map art, brightness, contrast, depth
+│   ├── ExportPanel.tsx           # Download .schem, .nbt, PNG, CSV
+│   ├── HistoryGallery.tsx        # Generation history with remix/delete
 │   ├── ImportGuide.tsx           # In-app Minecraft import instructions
 │   ├── VersionCompatibility.tsx  # MC version block compatibility checker
-│   ├── Header.tsx                # App header
-│   └── LayoutShell.tsx           # Layout wrapper
-├── hooks/                        # Custom React hooks
-│   └── useImageGeneration.ts     # Full pipeline state management + history save
-├── Docs/                         # Project documentation
-│   └── export-format-decision.md # Export format research & decision
+│   ├── SkeletonLoader.tsx        # Animated placeholder while generating
+│   ├── ThemeToggle.tsx           # Dark/light theme toggle (top-right)
+│   ├── ImageEditor.tsx           # Pre-conversion image editing tools
+│   ├── PaletteBuilder.tsx        # (Kept for reference, not active in UI)
+│   └── MaterialsList.tsx         # Block materials list
+├── hooks/
+│   └── useImageGeneration.ts     # Pipeline state, settings persistence, history save
 ├── python/                       # Python backend
 │   ├── data/
-│   │   ├── block_colors.json     # 204 Minecraft blocks with RGB values
-│   │   ├── palettes.json         # 8 palette presets
+│   │   ├── block_colors.json     # 205 Minecraft blocks with RGB values
+│   │   ├── palettes.json         # 8 palette presets (Full is default)
 │   │   └── history.db            # SQLite history database (auto-created)
 │   ├── services/
-│   │   ├── main.py               # FastAPI app
-│   │   ├── ollama_service.py     # Prompt refinement
-│   │   ├── sd_service.py         # Image generation
-│   │   ├── color_matcher.py      # Color distance + block matching
-│   │   ├── block_mapper.py       # Image to block grid
-│   │   ├── image_processor.py    # Image preprocessing
-│   │   ├── schematic_exporter.py # .schem export
-│   │   ├── structure_exporter.py # .nbt export
-│   │   ├── grid_extruder.py      # 2D to 3D extrusion
+│   │   ├── main.py               # FastAPI app + all endpoints
+│   │   ├── ollama_service.py     # Prompt formatter (bypassed in pipeline)
+│   │   ├── sd_service.py         # SD image generation (DPM++ 2M Karras, CFG 9)
+│   │   ├── color_matcher.py      # LAB color distance + KDTree block matching
+│   │   ├── block_mapper.py       # Image to block grid (vectorized NumPy)
+│   │   ├── image_processor.py    # Preprocessing: flatten, posterize, quantize
+│   │   ├── schematic_exporter.py # WorldEdit .schem export
+│   │   ├── structure_exporter.py # Vanilla .nbt export
+│   │   ├── grid_extruder.py      # 2D to 3D extrusion for depth
 │   │   └── history_service.py    # SQLite history storage
 │   ├── utils/
 │   │   └── validate_blocks.py    # Block database validator
 │   └── tests/                    # Unit tests
+│       ├── test_color_matcher.py
+│       ├── test_schematic_exporter.py
+│       └── test_structure_exporter.py
+├── Docs/
+│   └── export-format-decision.md # Export format research & decision
 ├── docker-compose.yml            # Docker setup (optional)
 └── README.md
 ```
+
+---
+
+## Default Settings
+
+| Setting | Value | Notes |
+|---------|-------|-------|
+| Grid size | 64×64 | Fixed — not user-selectable |
+| Block palette | Full (75 blocks) | Fixed — concrete, wool, terracotta, special blocks |
+| SD sampler | DPM++ 2M Karras | Better flat color output than Euler a |
+| SD CFG scale | 9 | Higher prompt adherence |
+| SD steps | 25 | Balance of speed and quality |
+| Color algorithm | CIE76 Delta-E (LAB) | Most perceptually accurate |
 
 ---
 
@@ -233,16 +269,16 @@ minecraft-ai-builder/
 
 | Component | RAM | Disk | Notes |
 |-----------|-----|------|-------|
-| Ollama (Llama 3) | 8 GB min | ~5 GB | CPU only |
 | Stable Diffusion | 8 GB min | ~5-10 GB | GPU recommended |
-| **Total** | **16 GB min, 32 GB recommended** | ~15 GB | All services simultaneous |
+| Python Backend | 2 GB | ~500 MB | FastAPI + NumPy |
+| Next.js Frontend | 1 GB | ~300 MB | Dev mode |
+| **Total** | **8 GB min, 16 GB recommended** | ~12 GB | |
 
 ### Performance
+- **Apple Silicon (M1/M2/M3):** ~30-60 seconds per image
+- **Intel Mac (CPU only):** ~1-3 minutes per image
 - **NVIDIA GPU:** ~5-15 seconds per image
-- **Apple Silicon (M1/M2):** ~30-60 seconds per image
-- **Intel Mac (CPU):** ~1-3 minutes per image
 - Block conversion 64×64: <1 second
-- Block conversion 128×128: <3 seconds
 
 ---
 
@@ -250,14 +286,13 @@ minecraft-ai-builder/
 
 | Problem | Solution |
 |---------|----------|
-| "Refine failed" | Make sure Ollama is running (`ollama serve`) and Llama 3 is downloaded (`ollama list`) |
-| "Image generation failed" | Make sure SD is running on port 7860 with a model selected |
-| "Conversion failed" | Check Python backend is running on port 8000 |
-| "Gray blocks in preview" | Restart all 4 services; check Python backend logs for errors |
+| "Image generation failed: 500" | Make sure SD is running on port 7860 with a model selected |
+| "Cannot reach the server" | Check Python backend is running on port 8000 (`uvicorn services.main:app --reload`) |
+| "Conversion failed" | Restart Python backend; check terminal for errors |
+| Gray blocks in preview | Restart all services; check backend logs |
+| SD slow on Mac | Expected — uses CPU. Apple Silicon is faster than Intel Mac |
 | History not showing | Delete `python/data/history.db` and regenerate — schema may be outdated |
 | SD `svglib`/`pycairo` errors | Non-fatal, ignore |
-| SD `joblib` error | Non-fatal, ignore |
 | SD `CUDA not enabled` | Expected on Mac, uses CPU |
-| MLX warnings (Ollama) | Non-fatal, ignore |
-| Refine timeout (504) | Increase `TIMEOUT_SECONDS` in `python/services/ollama_service.py` |
-| Prompt too long (422) | `max_length` in `GenerateImageRequest` in `main.py` is set to 2000 |
+| MLX warnings (Ollama) | Non-fatal, ignore — Ollama not active in pipeline |
+| Theme not persisting | Clear localStorage in browser dev tools and reload |
