@@ -44,9 +44,9 @@ class TestGenerateImage:
         mock_post.assert_called_once()
         kwargs = mock_post.call_args.kwargs
         assert kwargs["timeout"] == REQUEST_TIMEOUT_SECONDS
-        assert kwargs["json"]["steps"] == DEFAULT_STEPS
-        assert kwargs["json"]["sampler_name"] == DEFAULT_SAMPLER_NAME
-        assert kwargs["json"]["cfg_scale"] == DEFAULT_CFG_SCALE
+        assert kwargs["json"]["steps"] == 18
+        assert kwargs["json"]["sampler_name"] == "Euler a"
+        assert kwargs["json"]["cfg_scale"] == 7
         assert kwargs["json"]["width"] == DEFAULT_WIDTH
         assert kwargs["json"]["height"] == DEFAULT_HEIGHT
 

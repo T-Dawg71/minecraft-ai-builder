@@ -113,7 +113,7 @@ class BlockColorMatcher:
         preset = palettes[palette_name]
 
         if "categories" in preset:
-            return [b for b in ALL_BLOCKS if b["category"] in preset["categories"]]
+            return [b for b in ALL_BLOCKS if b.get("category") in preset["categories"]]
         elif "block_ids" in preset:
             ids = set(preset["block_ids"])
             return [b for b in ALL_BLOCKS if b["id"] in ids]
@@ -180,8 +180,9 @@ class BlockColorMatcher:
         """Get summary info about the current palette."""
         categories = {}
         for b in self.blocks:
-            cat = b["category"]
-            categories[cat] = categories.get(cat, 0) + 1
+            cat = b.get("category")
+            if cat is not None:
+                categories[cat] = categories.get(cat, 0) + 1
         return {
             "total_blocks": len(self.blocks),
             "categories": categories,

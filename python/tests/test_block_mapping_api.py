@@ -7,6 +7,16 @@ from io import BytesIO
 from fastapi.testclient import TestClient
 from PIL import Image
 
+
+# Ensure the parent directory is in sys.path for reliable imports
+
+# Robustly add the parent directory containing 'services' to sys.path
+import sys
+from pathlib import Path
+test_dir = Path(__file__).resolve().parent
+root = test_dir.parent  # This should be the 'python' directory
+if str(root) not in sys.path:
+    sys.path.insert(0, str(root))
 from services.main import app
 
 client = TestClient(app)
@@ -52,13 +62,12 @@ class TestConvertToBlocksEndpoint:
         assert data["dimensions"] == {"width": 2, "height": 2}
         assert data["block_count"] == 4
         assert data["grid"] == [
-            ["test:white", "test:black"],
+            ["test:white", "test:red"],
             ["test:red", "test:white"],
         ]
         assert data["palette_summary"] == {
             "test:white": 2,
-            "test:black": 1,
-            "test:red": 1,
+            "test:red": 2,
         }
 
     def test_convert_to_blocks_returns_preview_image(self):

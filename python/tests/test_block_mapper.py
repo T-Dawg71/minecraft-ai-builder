@@ -5,6 +5,14 @@ import time
 import numpy as np
 from PIL import Image
 
+
+# Robustly add the parent directory containing 'services' to sys.path
+import sys
+from pathlib import Path
+test_dir = Path(__file__).resolve().parent
+root = test_dir.parent  # This should be the 'python' directory
+if str(root) not in sys.path:
+    sys.path.insert(0, str(root))
 from services.color_matcher import BlockColorMatcher
 from services.block_mapper import BlockGrid, image_to_block_grid
 

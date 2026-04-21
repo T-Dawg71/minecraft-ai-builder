@@ -1,0 +1,22 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.12, pytest-9.0.2, pluggy-1.6.0 -- /Users/kevinorange/minecraft-ai-builder/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/kevinorange/minecraft-ai-builder/python
+plugins: cov-7.1.0, anyio-4.13.0
+collecting ... collected 0 items / 1 error
+
+==================================== ERRORS ====================================
+_______________ ERROR collecting tests/test_block_mapping_api.py _______________
+ImportError while importing test module '/Users/kevinorange/minecraft-ai-builder/python/tests/test_block_mapping_api.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/homebrew/Cellar/python@3.13/3.13.12_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_block_mapping_api.py:10: in <module>
+    from services.main import app
+E   ModuleNotFoundError: No module named 'services'
+=========================== short test summary info ============================
+ERROR tests/test_block_mapping_api.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+=============================== 1 error in 0.47s ===============================

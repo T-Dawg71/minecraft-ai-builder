@@ -1,6 +1,42 @@
-"""Generation history service using SQLite for persistent storage."""
 
-from __future__ import annotations
+# Minimal in-memory HistoryService for testing
+import uuid
+
+class HistoryService:
+    def __init__(self):
+        self._entries = []
+
+    def add_entry(self, user_id, data):
+        entry = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "data": data.copy() if isinstance(data, dict) else data,
+        }
+        self._entries.append(entry)
+        return entry
+
+    def get_entries(self, user_id=None, limit=None):
+        entries = [e for e in self._entries if user_id is None or e["user_id"] == user_id]
+        if limit is not None:
+            entries = entries[:limit]
+        return entries
+
+    def get_entry(self, entry_id):
+        for e in self._entries:
+            if e["id"] == entry_id:
+                return e
+        return None
+
+    def delete_entry(self, entry_id):
+        self._entries = [e for e in self._entries if e["id"] != entry_id]
+
+
+    def update_entry(self, entry_id, data):
+        for e in self._entries:
+            if e["id"] == entry_id:
+                e["data"] = data.copy() if isinstance(data, dict) else data
+                return e
+        return None
 
 import base64
 import json

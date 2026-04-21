@@ -66,16 +66,20 @@ def image_to_block_grid(
     blocks: list[list[dict]] = []
     palette_used: dict[str, int] = {}
 
+
+    # Fill the grid row by row, left to right, matching the flat pixel order
+    blocks = []
+    palette_used = {}
     for row_index in range(height):
-        row: list[dict] = []
-        for match_index in grid_match_indices[row_index]:
+        row = []
+        for col_index in range(width):
+            flat_index = row_index * width + col_index
+            match_index = inverse_indices[flat_index]
             block = unique_matches[int(match_index)]
             row.append(block)
             block_id = block["id"]
             palette_used[block_id] = palette_used.get(block_id, 0) + 1
-
         blocks.append(row)
-
         if progress_callback is not None:
             progress_callback(row_index + 1, height)
 
