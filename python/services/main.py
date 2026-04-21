@@ -1,7 +1,9 @@
 import asyncio
 import base64
 import binascii
+import platform
 from io import BytesIO
+from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Query
@@ -46,6 +48,16 @@ app.add_middleware(
 )
 
 
+def _get_schematics_dir() -> Path:
+    """Return the WorldEdit schematics folder path for the current OS."""
+    if platform.system() == "Darwin":  # macOS
+        return Path.home() / "Library" / "Application Support" / "minecraft" / "config" / "worldedit" / "schematics"
+    elif platform.system() == "Windows":
+        return Path.home() / "AppData" / "Roaming" / ".minecraft" / "config" / "worldedit" / "schematics"
+    else:  # Linux
+        return Path.home() / ".minecraft" / "config" / "worldedit" / "schematics"
+
+
 class RefinePromptRequest(BaseModel):
     description: str = Field(..., min_length=1, max_length=2000)
 
@@ -53,12 +65,12 @@ class RefinePromptRequest(BaseModel):
 class RefinePromptResponse(BaseModel):
     original: str
     refined: str
-    negative: str  # NEW: negative prompt returned alongside positive
+    negative: str
 
 
 class GenerateImageRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=2000)
-    negative_prompt: str | None = Field(default=None, max_length=2000)  # NEW
+    negative_prompt: str | None = Field(default=None, max_length=2000)
     width: int | None = Field(default=None, gt=0, le=2048)
     height: int | None = Field(default=None, gt=0, le=2048)
 
@@ -108,6 +120,13 @@ class ExportBlockListRequest(BaseModel):
     format: Literal["csv", "json"] = "json"
 
 
+class SendToMinecraftRequest(BaseModel):
+    grid: list[list[str]] = Field(..., min_length=1)
+    orientation: Literal["wall", "floor"] = "floor"
+    depth: int = Field(default=1, ge=1, le=64)
+    map_art_mode: bool = False
+
+
 class SaveHistoryRequest(BaseModel):
     user_prompt: str
     refined_prompt: str = ""
@@ -125,8 +144,6 @@ def _decode_base64_image(image_base64: str) -> Image.Image:
     try:
         image = Image.open(BytesIO(image_bytes))
 
-        # Preserve visible content for transparent outputs. Direct RGBA->RGB may
-        # collapse transparent regions to black, causing black-block maps.
         if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
             rgba = image.convert("RGBA")
             background = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
@@ -198,7 +215,6 @@ def _build_block_conversion_result(
         dominant_ratio = dominant_count / total_blocks
         is_dark_dominant = _is_dark_block_id(dominant_block_id)
 
-        # Recovery path 1: auto-adjust with stronger brightness/contrast.
         if is_dark_dominant and dominant_ratio >= 0.95:
             recovered_image = preprocess_image(
                 image,
@@ -226,7 +242,6 @@ def _build_block_conversion_result(
                     dominant_ratio = recovered_ratio
                     is_dark_dominant = recovered_is_dark
 
-        # Recovery path 2: filtered safe palette that excludes ultra-dark blocks.
         if is_dark_dominant and dominant_ratio >= 0.95:
             safe_palette = _build_safe_palette(request.palette)
             safe_image = preprocess_image(
@@ -284,7 +299,6 @@ async def health_check():
 @app.post("/refine-prompt", response_model=RefinePromptResponse)
 async def refine_prompt_endpoint(request: RefinePromptRequest):
     try:
-        # refine_prompt now returns (positive, negative) tuple
         positive, negative = refine_prompt(request.description)
         return RefinePromptResponse(
             original=request.description,
@@ -308,7 +322,7 @@ async def generate_image_endpoint(request: GenerateImageRequest):
     try:
         image_bytes = generate_image(
             request.prompt,
-            negative_prompt=request.negative_prompt,  # NEW: pass through to SD
+            negative_prompt=request.negative_prompt,
             width=width,
             height=height,
         )
@@ -415,6 +429,53 @@ async def export_block_list_endpoint(request: ExportBlockListRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception:
         raise HTTPException(status_code=500, detail="Unexpected block list export error")
+
+
+@app.post("/export/send-to-minecraft")
+async def send_to_minecraft_endpoint(request: SendToMinecraftRequest):
+    """
+    Generates a .schem file and copies it directly to the local
+    WorldEdit schematics folder. User can then load it in-game with:
+      //schem load minecraft-build
+      //paste
+    """
+    schematics_dir = _get_schematics_dir()
+
+    if not schematics_dir.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"WorldEdit schematics folder not found at {schematics_dir}. "
+                "Make sure WorldEdit is installed and you have launched Minecraft at least once."
+            )
+        )
+
+    try:
+        content = export_structure(
+            request.grid,
+            format="schem",
+            orientation=request.orientation,
+            depth=request.depth,
+            map_art_mode=request.map_art_mode,
+        )
+
+        dest = schematics_dir / "minecraft-build.schem"
+        dest.write_bytes(content)
+
+        return {
+            "success": True,
+            "filename": "minecraft-build",
+            "path": str(dest),
+            "message": "File copied to WorldEdit schematics folder.",
+        }
+
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to write schematic: {str(exc)}"
+        ) from exc
 
 
 # ── History endpoints ──────────────────────────────────────────────────────────

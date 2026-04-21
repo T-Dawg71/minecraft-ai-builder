@@ -18,7 +18,6 @@ function parseFilename(contentDisposition: string | null, fallback: string) {
   if (!contentDisposition) {
     return fallback;
   }
-
   const match = contentDisposition.match(/filename="?([^";]+)"?/i);
   return match?.[1] ?? fallback;
 }
@@ -35,14 +34,8 @@ function triggerDownload(blob: Blob, filename: string) {
 }
 
 function formatBytes(bytes: number) {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
@@ -66,6 +59,8 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
   const [orientation, setOrientation] = useState<Orientation>("floor");
   const [depth, setDepth] = useState(Math.min(10, Math.max(1, initialDepth)));
   const [activeDownload, setActiveDownload] = useState<DownloadAction | null>(null);
+  const [isSendingToMinecraft, setIsSendingToMinecraft] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
   const [error, setError] = useState<string>("");
 
   const width = blockData.grid[0]?.length ?? blockData.dimensions?.width ?? 0;
@@ -79,6 +74,7 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
   async function downloadFile(action: DownloadAction) {
     setActiveDownload(action);
     setError("");
+    setSendSuccess(false);
 
     try {
       const request =
@@ -120,6 +116,47 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
       setActiveDownload(null);
     }
   }
+
+  async function sendToMinecraft() {
+    setIsSendingToMinecraft(true);
+    setError("");
+    setSendSuccess(false);
+
+    try {
+      const response = await fetch("/api/export/send-to-minecraft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          grid: blockData.grid,
+          orientation,
+          depth,
+          map_art_mode: mapArtMode,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Failed to send to Minecraft: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setSendSuccess(true);
+
+      // Clear success message after 5 seconds
+      setTimeout(() => setSendSuccess(false), 5000);
+
+      // Show the in-game command to the user
+      if (data.filename) {
+        setError("");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send to Minecraft.");
+    } finally {
+      setIsSendingToMinecraft(false);
+    }
+  }
+
+  const anyActionInProgress = activeDownload !== null || isSendingToMinecraft;
 
   return (
     <section className="overflow-hidden rounded-2xl border border-mc-stone-300 bg-linear-to-br from-mc-stone-50 via-mc-stone-100 to-mc-dirt-100 shadow-[0_18px_45px_rgba(50,50,48,0.08)]">
@@ -206,19 +243,45 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
             </p>
           )}
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          {/* Send to Minecraft — primary action */}
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={sendToMinecraft}
+              disabled={anyActionInProgress}
+              className="w-full rounded-xl border-2 border-mc-grass-700 bg-mc-grass-500 px-4 py-4 font-mono text-base font-bold uppercase tracking-wide text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSendingToMinecraft ? "⏳ Sending to Minecraft..." : "🎮 Send to Minecraft"}
+            </button>
+
+            {sendSuccess && (
+              <div className="mt-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 font-mono text-xs text-green-800">
+                <p className="font-bold">✅ Sent! File is in your WorldEdit schematics folder.</p>
+                <p className="mt-1 text-green-700">In-game, run these two commands:</p>
+                <code className="mt-1 block rounded bg-green-100 px-2 py-1 text-green-900">
+                  //schem load minecraft-build
+                </code>
+                <code className="mt-1 block rounded bg-green-100 px-2 py-1 text-green-900">
+                  //paste
+                </code>
+              </div>
+            )}
+          </div>
+
+          {/* Secondary download options */}
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <button
               type="button"
               onClick={() => downloadFile("schematic")}
-              disabled={activeDownload !== null}
-              className="rounded-xl border border-mc-grass-500 bg-mc-grass-500 px-4 py-3 font-mono text-sm font-bold uppercase tracking-wide text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={anyActionInProgress}
+              className="rounded-xl border border-mc-stone-300 bg-white px-4 py-3 font-mono text-sm font-bold uppercase tracking-wide text-mc-stone-900 transition hover:bg-mc-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {activeDownload === "schematic" ? "Preparing..." : `Download ${format}`}
             </button>
             <button
               type="button"
               onClick={() => downloadFile("preview")}
-              disabled={activeDownload !== null}
+              disabled={anyActionInProgress}
               className="rounded-xl border border-mc-stone-300 bg-white px-4 py-3 font-mono text-sm font-bold uppercase tracking-wide text-mc-stone-900 transition hover:bg-mc-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {activeDownload === "preview" ? "Rendering..." : "Download Preview PNG"}
@@ -226,7 +289,7 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
             <button
               type="button"
               onClick={() => downloadFile("block-list")}
-              disabled={activeDownload !== null}
+              disabled={anyActionInProgress}
               className="rounded-xl border border-mc-stone-300 bg-white px-4 py-3 font-mono text-sm font-bold uppercase tracking-wide text-mc-stone-900 transition hover:bg-mc-dirt-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {activeDownload === "block-list" ? "Compiling..." : "Download Block List CSV"}
