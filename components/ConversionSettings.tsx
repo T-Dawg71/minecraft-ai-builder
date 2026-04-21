@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState, useEffect } from "react";
+
 
 // ── Palette definitions ───────────────────────────────────────────────────────
 
@@ -15,11 +16,9 @@ export interface ConversionPaletteBlock {
   rgb: [number, number, number];
 }
 
-// Full palette — all blocks, always used. No user selection needed.
 export const FULL_PALETTE: BlockPalette = {
   name: "Full",
   blocks: [
-    // Concrete — most saturated, best for bold colors
     { name: "minecraft:white_concrete",            rgb: [207, 213, 214] },
     { name: "minecraft:orange_concrete",           rgb: [224,  97,   0] },
     { name: "minecraft:magenta_concrete",          rgb: [169,  48, 159] },
@@ -36,7 +35,6 @@ export const FULL_PALETTE: BlockPalette = {
     { name: "minecraft:green_concrete",            rgb: [ 73,  91,  36] },
     { name: "minecraft:red_concrete",              rgb: [142,  33,  33] },
     { name: "minecraft:black_concrete",            rgb: [  8,  10,  15] },
-    // Concrete Powder — slightly lighter variants, fills in mid-tones
     { name: "minecraft:white_concrete_powder",     rgb: [225, 227, 220] },
     { name: "minecraft:orange_concrete_powder",    rgb: [227, 131,  32] },
     { name: "minecraft:magenta_concrete_powder",   rgb: [201,  99, 196] },
@@ -53,7 +51,6 @@ export const FULL_PALETTE: BlockPalette = {
     { name: "minecraft:green_concrete_powder",     rgb: [ 97, 119,  44] },
     { name: "minecraft:red_concrete_powder",       rgb: [168,  54,  50] },
     { name: "minecraft:black_concrete_powder",     rgb: [ 26,  26,  29] },
-    // Wool — slightly warmer/softer than concrete
     { name: "minecraft:white_wool",                rgb: [233, 236, 236] },
     { name: "minecraft:orange_wool",               rgb: [240, 118,  19] },
     { name: "minecraft:magenta_wool",              rgb: [189,  68, 179] },
@@ -70,7 +67,6 @@ export const FULL_PALETTE: BlockPalette = {
     { name: "minecraft:green_wool",                rgb: [ 84, 109,  27] },
     { name: "minecraft:red_wool",                  rgb: [160,  40,  35] },
     { name: "minecraft:black_wool",                rgb: [ 26,  22,  22] },
-    // Terracotta — earthy mid-tones, great for skin/brown/orange ranges
     { name: "minecraft:white_terracotta",          rgb: [210, 178, 161] },
     { name: "minecraft:orange_terracotta",         rgb: [162,  84,  38] },
     { name: "minecraft:magenta_terracotta",        rgb: [149,  88, 108] },
@@ -87,7 +83,6 @@ export const FULL_PALETTE: BlockPalette = {
     { name: "minecraft:green_terracotta",          rgb: [ 76,  83,  42] },
     { name: "minecraft:red_terracotta",            rgb: [143,  61,  46] },
     { name: "minecraft:black_terracotta",          rgb: [ 37,  22,  16] },
-    // Special blocks — unique colors not covered by dyed blocks
     { name: "minecraft:emerald_block",             rgb: [ 79, 188,  73] },
     { name: "minecraft:redstone_block",            rgb: [175,  26,   5] },
     { name: "minecraft:lapis_block",               rgb: [ 29,  58, 139] },
@@ -104,7 +99,6 @@ export const FULL_PALETTE: BlockPalette = {
   ],
 };
 
-// Keep PRESETS exported so anything that still imports it doesn't break
 export const PRESETS: BlockPalette[] = [FULL_PALETTE];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -144,21 +138,67 @@ interface SliderProps {
 }
 
 function Slider({ label, value, min, max, onChange }: SliderProps) {
+  // Local string state so the box can be fully cleared while typing
+  const [inputVal, setInputVal] = useState("");
+
+    useEffect(() => {
+      setInputVal(String(value));
+    }, []);
+
+  // Keep local string in sync when slider moves
+  const handleSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const n = +e.target.value;
+    setInputVal(String(n));
+    onChange(n);
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setInputVal(raw); // allow empty / partial input while typing
+    if (raw === "" || raw === "-") return; // don't commit yet
+    const n = parseInt(raw, 10);
+    if (!isNaN(n)) onChange(Math.min(max, Math.max(min, n)));
+  };
+
+  const handleBlur = () => {
+    // On blur: if empty or invalid, reset to current value (treat blank as 0)
+    const n = parseInt(inputVal, 10);
+    if (isNaN(n) || inputVal === "" || inputVal === "-") {
+      setInputVal("0");
+      onChange(0);
+    } else {
+      const clamped = Math.min(max, Math.max(min, n));
+      setInputVal(String(clamped));
+      onChange(clamped);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex justify-between text-xs text-mc-stone-500">
+      <div className="flex justify-between items-center text-xs text-mc-stone-500">
         <span className="uppercase tracking-widest">{label}</span>
-        <span className={value !== 0 ? "text-mc-grass-700 font-bold" : ""}>
-          {value > 0 ? `+${value}` : value}
-        </span>
+        <input
+          type="text"
+          value={inputVal}
+          onChange={handleTextChange}
+          onBlur={handleBlur}
+          placeholder="0"
+          className={`w-16 rounded border px-2 py-0.5 text-right text-xs font-bold font-mono
+            bg-white border-mc-stone-300 text-mc-stone-900
+            focus:outline-none focus:border-mc-grass-500
+            ${value !== 0 ? "border-mc-grass-400" : ""}
+          `}
+        />
       </div>
       <input
         type="range" min={min} max={max} value={value}
-        onChange={e => onChange(+e.target.value)}
+        onChange={handleSlider}
         className="w-full accent-mc-grass-500"
       />
-      <div className="flex justify-between text-[10px] text-mc-stone-400">
-        <span>{min}</span><span>0</span><span>+{max}</span>
+      <div className="flex justify-between text-[10px] font-mono" style={{ color: "#8a8883" }}>
+        <span>{min}</span>
+        <span>0</span>
+        <span>+{max}</span>
       </div>
     </div>
   );
@@ -197,10 +237,36 @@ export default function ConversionSettings({
   hasBlockData,
   isConverting,
 }: ConversionSettingsProps) {
+  const [depthInput, setDepthInput] = useState("");
+
+    useEffect(() => {
+      setDepthInput(String(settings.depth));
+    }, []);
+
   const patch = useCallback(
     (p: Partial<ConversionSettingsData>) => onSettingsChange({ ...settings, ...p }),
     [settings, onSettingsChange]
   );
+
+  const handleDepthText = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setDepthInput(raw);
+    if (raw === "") return;
+    const n = parseInt(raw, 10);
+    if (!isNaN(n)) patch({ depth: Math.min(10, Math.max(1, n)) });
+  };
+
+  const handleDepthBlur = () => {
+    const n = parseInt(depthInput, 10);
+    if (isNaN(n) || depthInput === "") {
+      setDepthInput("1");
+      patch({ depth: 1 });
+    } else {
+      const clamped = Math.min(10, Math.max(1, n));
+      setDepthInput(String(clamped));
+      patch({ depth: clamped });
+    }
+  };
 
   return (
     <div className="flex flex-col gap-4 w-full font-mono text-sm rounded-md border-2 border-mc-stone-300 bg-mc-stone-100 p-4">
@@ -249,19 +315,33 @@ export default function ConversionSettings({
 
       {/* ── Extrusion Depth ── */}
       <div className="flex flex-col gap-1">
-        <div className="flex justify-between text-xs text-mc-stone-500">
+        <div className="flex justify-between items-center text-xs text-mc-stone-500">
           <span className="uppercase tracking-widest">Extrusion Depth</span>
-          <span className={settings.depth > 1 ? "text-mc-grass-700 font-bold" : ""}>
-            {settings.depth} block{settings.depth !== 1 ? "s" : ""}
-          </span>
+          <input
+            type="text"
+            value={depthInput}
+            onChange={handleDepthText}
+            onBlur={handleDepthBlur}
+            placeholder="1"
+            className={`w-16 rounded border px-2 py-0.5 text-right text-xs font-bold font-mono
+              bg-white border-mc-stone-300 text-mc-stone-900
+              focus:outline-none focus:border-mc-grass-500
+              ${settings.depth > 1 ? "border-mc-grass-400" : ""}
+            `}
+          />
         </div>
         <input
           type="range" min={1} max={10} value={settings.depth}
-          onChange={e => patch({ depth: +e.target.value })}
+          onChange={e => {
+            const n = +e.target.value;
+            setDepthInput(String(n));
+            patch({ depth: n });
+          }}
           className="w-full accent-mc-grass-500"
         />
-        <div className="flex justify-between text-[10px] text-mc-stone-400">
-          <span>1 (flat)</span><span>10</span>
+        <div className="flex justify-between text-[10px] font-mono" style={{ color: "#8a8883" }}>
+          <span>1 (flat)</span>
+          <span>10</span>
         </div>
         {settings.depth > 1 && (
           <div className="flex gap-2 mt-1">

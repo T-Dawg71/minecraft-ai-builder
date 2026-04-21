@@ -30,7 +30,7 @@ export default function Home() {
     setInput,
   } = useImageGeneration();
 
-  const [mcVersion, setMcVersion] = useState<MinecraftVersion>("1.20");
+  const [mcVersion, setMcVersion] = useState<MinecraftVersion>("1.21");
   const [editedImageBase64, setEditedImageBase64] = useState<string | null>(null);
 
   const handleRemix = (prompt: string) => {
