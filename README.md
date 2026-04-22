@@ -1,6 +1,6 @@
 # Minecraft AI Image-to-Blocks Generator
 
-An AI-powered tool that converts text descriptions into Minecraft block patterns. Type a description, Stable Diffusion generates an image, and the system converts it to Minecraft blocks you can import directly into your world.
+An AI-powered tool that converts text descriptions into Minecraft block patterns. Type a description, Stable Diffusion generates an image, and the system converts it to Minecraft blocks you can import directly into your world — with one click.
 
 ## Tech Stack
 
@@ -75,7 +75,7 @@ ollama pull llama3
 
 ## Running the Application
 
-Open **3 terminal windows** (Ollama is optional):
+Open **3 terminal windows**:
 
 ### Terminal 1 — Stable Diffusion
 ```bash
@@ -110,26 +110,35 @@ Go to **http://localhost:3000** and type a description like `a castle on a hill`
 2. **Flatten & Preprocess** — The image is contrast-boosted, posterized, and color-flattened to improve block mapping accuracy
 3. **Convert to Blocks** — Each pixel is matched to the closest Minecraft block using CIE76 Delta-E in LAB color space across 75 blocks (concrete, wool, terracotta, special blocks)
 4. **Preview** — Side-by-side comparison of the original image and block grid with zoom/pan controls
-5. **Export** — Download as `.schem` (WorldEdit) or `.nbt` (vanilla structure blocks) for import into Minecraft
-6. **History** — Every generation is saved automatically. Browse, remix, or delete past creations from the gallery
+5. **Send to Minecraft** — One-click export that copies the `.schem` directly to your WorldEdit schematics folder. Run two commands in-game and the build appears instantly.
+6. **Export** — Also available: download `.schem`, `.nbt`, preview PNG, or block list CSV
+7. **History** — Every generation is saved automatically. Browse, remix, or delete past creations from the gallery
 
 ---
 
 ## Importing into Minecraft
 
-### WorldEdit (.schem) — Recommended
-1. Install WorldEdit mod (Fabric) for your Minecraft version
-2. Copy the `.schem` file to:
-```
-~/.minecraft/config/worldedit/schematics/
-```
-3. In-game run:
+### Option 1 — Send to Minecraft Button (Easiest)
+1. Generate a build in the app
+2. Click **🎮 Send to Minecraft** in the Export panel
+3. Open Minecraft, stand where you want the build placed
+4. Run in chat:
 ```
 //schem load minecraft-build
 //paste
 ```
+The `.schem` file is copied automatically — no manual file moving needed.
 
-### Structure Blocks (.nbt) — Vanilla, no mods needed
+> **Mac:** `~/Library/Application Support/minecraft/config/worldedit/schematics/`
+> **Windows:** `~/AppData/Roaming/.minecraft/config/worldedit/schematics/`
+> **Linux:** `~/.minecraft/config/worldedit/schematics/`
+
+### Option 2 — Download & Copy Manually
+1. Click **Download schem** in the Export panel
+2. Copy the file to your WorldEdit schematics folder (paths above)
+3. Run `//schem load minecraft-build` then `//paste` in-game
+
+### Option 3 — Structure Blocks (.nbt) — Vanilla, no mods needed
 1. Copy the `.nbt` file to:
 ```
 ~/.minecraft/saves/[world]/generated/minecraft/structures/
@@ -138,6 +147,21 @@ Go to **http://localhost:3000** and type a description like `a castle on a hill`
 3. Set mode to **Load**, enter the filename, click **LOAD**
 
 > Structure blocks have a 48×48×48 size limit. Use WorldEdit for larger builds.
+
+---
+
+## UI Features
+
+| Feature | Description |
+|---------|-------------|
+| 🎮 Send to Minecraft | One-click copies .schem directly to WorldEdit folder |
+| 🌙 Dark/Light Theme | Toggle in top-right corner, persists across sessions via localStorage |
+| ⏳ Loading Skeleton | Animated placeholder appears immediately while SD generates |
+| 🔍 Zoom & Pan | Mouse wheel zoom + drag on the block preview |
+| 🖼 Image Editor | Crop and adjust the SD image before converting to blocks |
+| 📋 History Gallery | Browse, remix, or delete past generations |
+| 🔄 Re-convert | Adjust brightness/contrast/depth and re-run block mapping without regenerating the image |
+| 🎚 Precision Sliders | Brightness, contrast, and depth sliders all have clearable text inputs for exact values |
 
 ---
 
@@ -181,6 +205,7 @@ python -m services.history_service
 | POST | `/export/schematic` | Export block grid as .schem or .nbt |
 | POST | `/export/preview-image` | Export block grid as PNG |
 | POST | `/export/block-list` | Export block list as CSV |
+| POST | `/export/send-to-minecraft` | Copy .schem directly to WorldEdit schematics folder |
 | GET | `/history` | Get paginated generation history |
 | POST | `/history` | Save a generation to history |
 | GET | `/history/{id}` | Get a single history entry |
@@ -199,24 +224,24 @@ minecraft-ai-builder/
 │   │   ├── generate-image/       # Image generation via SD
 │   │   ├── convert-to-blocks/    # Block conversion + color map attachment
 │   │   ├── block-colors/         # Block color data from block_colors.json
-│   │   ├── export/               # Schematic, preview image, block list export
+│   │   ├── export/               # Schematic, preview image, block list, send-to-minecraft
 │   │   └── history/              # Generation history (GET, POST, DELETE)
 │   │       └── [id]/             # Single entry (GET, DELETE)
 │   ├── page.tsx                  # Main application page
 │   ├── layout.tsx                # App layout with ThemeToggle
-│   └── globals.css               # Tailwind v4 theme + dark mode variables
+│   └── globals.css               # Tailwind v4 theme + dark/light mode variables
 ├── components/                   # React components
 │   ├── PromptInput.tsx           # Text input with character counter
 │   ├── PipelineStatus.tsx        # Step-by-step progress indicator
 │   ├── BlockPreview.tsx          # Canvas-based block grid renderer
 │   ├── ComparisonView.tsx        # Side-by-side image vs block preview
-│   ├── ConversionSettings.tsx    # Dithering, map art, brightness, contrast, depth
-│   ├── ExportPanel.tsx           # Download .schem, .nbt, PNG, CSV
+│   ├── ConversionSettings.tsx    # Dithering, map art, brightness, contrast, depth sliders
+│   ├── ExportPanel.tsx           # Send to Minecraft + download .schem/.nbt/PNG/CSV
 │   ├── HistoryGallery.tsx        # Generation history with remix/delete
-│   ├── ImportGuide.tsx           # In-app Minecraft import instructions
-│   ├── VersionCompatibility.tsx  # MC version block compatibility checker
+│   ├── ImportGuide.tsx           # In-app Minecraft import instructions (accordion)
+│   ├── VersionCompatibility.tsx  # MC version block compatibility checker (default 1.21)
 │   ├── SkeletonLoader.tsx        # Animated placeholder while generating
-│   ├── ThemeToggle.tsx           # Dark/light theme toggle (top-right)
+│   ├── ThemeToggle.tsx           # Dark/light theme toggle (fixed top-right)
 │   ├── ImageEditor.tsx           # Pre-conversion image editing tools
 │   ├── PaletteBuilder.tsx        # (Kept for reference, not active in UI)
 │   └── MaterialsList.tsx         # Block materials list
@@ -258,6 +283,7 @@ minecraft-ai-builder/
 |---------|-------|-------|
 | Grid size | 64×64 | Fixed — not user-selectable |
 | Block palette | Full (75 blocks) | Fixed — concrete, wool, terracotta, special blocks |
+| Minecraft version | 1.21 | Default in version compatibility checker |
 | SD sampler | DPM++ 2M Karras | Better flat color output than Euler a |
 | SD CFG scale | 9 | Higher prompt adherence |
 | SD steps | 25 | Balance of speed and quality |
@@ -289,6 +315,7 @@ minecraft-ai-builder/
 | "Image generation failed: 500" | Make sure SD is running on port 7860 with a model selected |
 | "Cannot reach the server" | Check Python backend is running on port 8000 (`uvicorn services.main:app --reload`) |
 | "Conversion failed" | Restart Python backend; check terminal for errors |
+| "Send to Minecraft" returns 404 | Make sure WorldEdit is installed and Minecraft has been launched at least once |
 | Gray blocks in preview | Restart all services; check backend logs |
 | SD slow on Mac | Expected — uses CPU. Apple Silicon is faster than Intel Mac |
 | History not showing | Delete `python/data/history.db` and regenerate — schema may be outdated |
