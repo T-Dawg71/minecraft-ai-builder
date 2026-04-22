@@ -1,6 +1,8 @@
 """Unit tests for the block grid generator service."""
 
+from email.mime import image
 import time
+from tracemalloc import start
 
 import numpy as np
 from PIL import Image
@@ -94,3 +96,29 @@ class TestImageToBlockGrid:
         assert grid.width == 128
         assert grid.height == 128
         assert elapsed < 3.0, f"Expected <3.0s, got {elapsed:.2f}s"
+
+    def test_performance_target_64_by_64_under_one_second(self):
+        gradient = np.tile(np.arange(64, dtype=np.uint8), (64, 1))
+        rgb = np.stack([gradient, np.flipud(gradient), gradient], axis=-1)
+        image = Image.fromarray(rgb, mode="RGB")
+
+        start = time.time()
+        grid = image_to_block_grid(image, "wool")
+        elapsed = time.time() - start
+
+        assert grid.width == 64
+        assert grid.height == 64
+        assert elapsed < 1.0, f"Expected <1.0s, got {elapsed:.2f}s"
+
+    def test_performance_target_256_by_256_under_ten_seconds(self):
+        gradient = np.tile(np.arange(256, dtype=np.uint8), (256, 1))
+        rgb = np.stack([gradient, np.flipud(gradient), gradient], axis=-1)
+        image = Image.fromarray(rgb, mode="RGB")
+
+        start = time.time()
+        grid = image_to_block_grid(image, "wool")
+        elapsed = time.time() - start
+
+        assert grid.width == 256
+        assert grid.height == 256
+        assert elapsed < 10.0, f"Expected <10.0s, got {elapsed:.2f}s"

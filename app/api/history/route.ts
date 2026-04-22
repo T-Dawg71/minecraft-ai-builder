@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+
+function generateETag(data: unknown): string {
+  return `"${createHash('md5').update(JSON.stringify(data)).digest('hex')}"`;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,7 +17,21 @@ export async function GET(req: NextRequest) {
       const err = await res.json().catch(() => ({}));
       return NextResponse.json({ error: err.detail || "Failed to fetch history" }, { status: res.status });
     }
-    return NextResponse.json(await res.json());
+
+    const data = await res.json();
+    const etag = generateETag(data);
+    const ifNoneMatch = req.headers.get("if-none-match");
+
+    if (ifNoneMatch === etag) {
+      return new Response(null, { status: 304 });
+    }
+
+    return NextResponse.json(data, {
+      headers: {
+        "ETag": etag,
+        "Cache-Control": "private, no-cache",
+      },
+    });
   } catch {
     return NextResponse.json({ error: "Backend not available" }, { status: 500 });
   }

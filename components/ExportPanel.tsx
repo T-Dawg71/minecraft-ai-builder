@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
+import { useMemo, useState, memo } from "react";
 import type { BlockGridData } from "@/components/BlockPreview";
 
 type ExportFormat = "schem" | "nbt";
@@ -15,9 +14,7 @@ interface ExportPanelProps {
 }
 
 function parseFilename(contentDisposition: string | null, fallback: string) {
-  if (!contentDisposition) {
-    return fallback;
-  }
+  if (!contentDisposition) return fallback;
   const match = contentDisposition.match(/filename="?([^";]+)"?/i);
   return match?.[1] ?? fallback;
 }
@@ -53,7 +50,7 @@ function estimateExportSize(
   return Math.max(512, Math.round(headerBytes + payloadBytes));
 }
 
-export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = false }: ExportPanelProps) {
+function ExportPanel({ blockData, initialDepth = 1, mapArtMode = false }: ExportPanelProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [format, setFormat] = useState<ExportFormat>("schem");
   const [orientation, setOrientation] = useState<Orientation>("floor");
@@ -79,22 +76,10 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
     try {
       const request =
         action === "schematic"
-          ? {
-              endpoint: "/api/export/schematic",
-              payload: { grid: blockData.grid, format, orientation, depth, map_art_mode: mapArtMode },
-              fallbackName: `minecraft-build.${format}`,
-            }
+          ? { endpoint: "/api/export/schematic", payload: { grid: blockData.grid, format, orientation, depth, map_art_mode: mapArtMode }, fallbackName: `minecraft-build.${format}` }
           : action === "preview"
-            ? {
-                endpoint: "/api/export/preview-image",
-                payload: { grid: blockData.grid, scale: 24 },
-                fallbackName: "minecraft-preview.png",
-              }
-            : {
-                endpoint: "/api/export/block-list",
-                payload: { grid: blockData.grid, format: "csv" },
-                fallbackName: "minecraft-blocks.csv",
-              };
+            ? { endpoint: "/api/export/preview-image", payload: { grid: blockData.grid, scale: 24 }, fallbackName: "minecraft-preview.png" }
+            : { endpoint: "/api/export/block-list", payload: { grid: blockData.grid, format: "csv" }, fallbackName: "minecraft-blocks.csv" };
 
       const response = await fetch(request.endpoint, {
         method: "POST",
@@ -126,12 +111,7 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
       const response = await fetch("/api/export/send-to-minecraft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          grid: blockData.grid,
-          orientation,
-          depth,
-          map_art_mode: mapArtMode,
-        }),
+        body: JSON.stringify({ grid: blockData.grid, orientation, depth, map_art_mode: mapArtMode }),
       });
 
       if (!response.ok) {
@@ -139,16 +119,8 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
         throw new Error(data.error || `Failed to send to Minecraft: ${response.status}`);
       }
 
-      const data = await response.json();
       setSendSuccess(true);
-
-      // Clear success message after 5 seconds
       setTimeout(() => setSendSuccess(false), 5000);
-
-      // Show the in-game command to the user
-      if (data.filename) {
-        setError("");
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send to Minecraft.");
     } finally {
@@ -185,7 +157,7 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
                 Structure Format
                 <select
                   value={format}
-                  onChange={(event) => setFormat(event.target.value as ExportFormat)}
+                  onChange={(e) => setFormat(e.target.value as ExportFormat)}
                   className="rounded-md border border-mc-stone-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-mc-stone-900 focus:outline-none focus:border-mc-grass-500"
                 >
                   <option value="schem">.schem</option>
@@ -197,7 +169,7 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
                 Placement
                 <select
                   value={orientation}
-                  onChange={(event) => setOrientation(event.target.value as Orientation)}
+                  onChange={(e) => setOrientation(e.target.value as Orientation)}
                   className="rounded-md border border-mc-stone-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-mc-stone-900 focus:outline-none focus:border-mc-grass-500"
                 >
                   <option value="floor">Floor</option>
@@ -209,11 +181,8 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
                 Depth
                 <div className="flex items-center gap-3">
                   <input
-                    type="range"
-                    min={1}
-                    max={10}
-                    value={depth}
-                    onChange={(event) => setDepth(Number(event.target.value))}
+                    type="range" min={1} max={10} value={depth}
+                    onChange={(e) => setDepth(Number(e.target.value))}
                     className="w-full accent-mc-grass-500"
                   />
                   <span className="min-w-10 text-right text-sm font-bold text-mc-stone-900">{depth}</span>
@@ -243,7 +212,6 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
             </p>
           )}
 
-          {/* Send to Minecraft — primary action */}
           <div className="mt-5">
             <button
               type="button"
@@ -258,40 +226,23 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
               <div className="mt-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 font-mono text-xs text-green-800">
                 <p className="font-bold">✅ Sent! File is in your WorldEdit schematics folder.</p>
                 <p className="mt-1 text-green-700">In-game, run these two commands:</p>
-                <code className="mt-1 block rounded bg-green-100 px-2 py-1 text-green-900">
-                  //schem load minecraft-build
-                </code>
-                <code className="mt-1 block rounded bg-green-100 px-2 py-1 text-green-900">
-                  //paste
-                </code>
+                <code className="mt-1 block rounded bg-green-100 px-2 py-1 text-green-900">//schem load minecraft-build</code>
+                <code className="mt-1 block rounded bg-green-100 px-2 py-1 text-green-900">//paste</code>
               </div>
             )}
           </div>
 
-          {/* Secondary download options */}
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            <button
-              type="button"
-              onClick={() => downloadFile("schematic")}
-              disabled={anyActionInProgress}
-              className="rounded-xl border border-mc-stone-300 bg-white px-4 py-3 font-mono text-sm font-bold uppercase tracking-wide text-mc-stone-900 transition hover:bg-mc-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            <button type="button" onClick={() => downloadFile("schematic")} disabled={anyActionInProgress}
+              className="rounded-xl border border-mc-stone-300 bg-white px-4 py-3 font-mono text-sm font-bold uppercase tracking-wide text-mc-stone-900 transition hover:bg-mc-stone-100 disabled:cursor-not-allowed disabled:opacity-50">
               {activeDownload === "schematic" ? "Preparing..." : `Download ${format}`}
             </button>
-            <button
-              type="button"
-              onClick={() => downloadFile("preview")}
-              disabled={anyActionInProgress}
-              className="rounded-xl border border-mc-stone-300 bg-white px-4 py-3 font-mono text-sm font-bold uppercase tracking-wide text-mc-stone-900 transition hover:bg-mc-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            <button type="button" onClick={() => downloadFile("preview")} disabled={anyActionInProgress}
+              className="rounded-xl border border-mc-stone-300 bg-white px-4 py-3 font-mono text-sm font-bold uppercase tracking-wide text-mc-stone-900 transition hover:bg-mc-stone-100 disabled:cursor-not-allowed disabled:opacity-50">
               {activeDownload === "preview" ? "Rendering..." : "Download Preview PNG"}
             </button>
-            <button
-              type="button"
-              onClick={() => downloadFile("block-list")}
-              disabled={anyActionInProgress}
-              className="rounded-xl border border-mc-stone-300 bg-white px-4 py-3 font-mono text-sm font-bold uppercase tracking-wide text-mc-stone-900 transition hover:bg-mc-dirt-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            <button type="button" onClick={() => downloadFile("block-list")} disabled={anyActionInProgress}
+              className="rounded-xl border border-mc-stone-300 bg-white px-4 py-3 font-mono text-sm font-bold uppercase tracking-wide text-mc-stone-900 transition hover:bg-mc-dirt-100 disabled:cursor-not-allowed disabled:opacity-50">
               {activeDownload === "block-list" ? "Compiling..." : "Download Block List CSV"}
             </button>
           </div>
@@ -306,3 +257,5 @@ export default function ExportPanel({ blockData, initialDepth = 1, mapArtMode = 
     </section>
   );
 }
+
+export default memo(ExportPanel);

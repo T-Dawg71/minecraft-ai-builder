@@ -11,6 +11,7 @@ import {
 interface ComparisonViewProps {
   imageBase64: string | null;
   blockData: BlockGridData | null;
+  materializedGrid?: BlockGrid | null;
   isConverting?: boolean;
 }
 
@@ -32,28 +33,34 @@ function computeStats(grid: BlockGrid) {
   }
   const uniqueTypes  = Object.keys(counts).length;
   const mostUsed     = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-  return { total, uniqueTypes, mostUsed: mostUsed?.[0] ?? "none", };
+  return { total, uniqueTypes, mostUsed: mostUsed?.[0] ?? "none" };
 }
 
-export default function ComparisonView({ imageBase64, blockData, isConverting = false }: ComparisonViewProps) {
-  // ALL hooks must be called before any conditional return
+export default function ComparisonView({
+  imageBase64,
+  blockData,
+  materializedGrid,
+  isConverting = false,
+}: ComparisonViewProps) {
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const overlayRef   = useRef<HTMLCanvasElement>(null);
   const isDragging   = useRef(false);
   const dragStart    = useRef({ x: 0, y: 0 });
   const lastOffset   = useRef<PanOffset>({ x: 0, y: 0 });
 
-  const [zoom, setZoom]             = useState(1);
-  const [offset, setOffset]         = useState<PanOffset>({ x: 0, y: 0 });
+  const [zoom, setZoom]               = useState(1);
+  const [offset, setOffset]           = useState<PanOffset>({ x: 0, y: 0 });
   const [overlayMode, setOverlayMode] = useState(false);
-  const [dragging, setDragging] = useState(false);
+  const [dragging, setDragging]       = useState(false);
 
   const hasData = !!(imageBase64 && blockData?.grid?.length);
 
-  const grid = useMemo(() => {
-    if (!hasData || !blockData) return null;
+  const localGrid = useMemo(() => {
+    if (!hasData || !blockData || materializedGrid) return null;
     return materializeBlockGrid(blockData);
-  }, [hasData, blockData]);
+  }, [hasData, blockData, materializedGrid]);
+
+  const grid = materializedGrid ?? localGrid;
 
   const rows = grid?.length ?? 0;
   const cols = grid?.[0]?.length ?? 0;
@@ -90,7 +97,6 @@ export default function ComparisonView({ imageBase64, blockData, isConverting = 
     if (overlayRef.current && grid) drawGrid(overlayRef.current, 0.5);
   }, [drawGrid, grid]);
 
-  // Now safe to do conditional returns AFTER all hooks
   if (!hasData) {
     return (
       <div className="rounded-lg border border-stone-700 bg-stone-800 p-8 min-h-[400px] flex items-center justify-center">
@@ -146,8 +152,8 @@ export default function ComparisonView({ imageBase64, blockData, isConverting = 
   };
 
   const viewportStyle = {
-    height:   400,
-    cursor:   dragging ? "grabbing" : "grab",
+    height: 400,
+    cursor: dragging ? "grabbing" : "grab",
   };
 
   return (
@@ -243,9 +249,9 @@ export default function ComparisonView({ imageBase64, blockData, isConverting = 
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
           {[
-            { label: "Total Blocks",   value: (blockData?.blockCount ?? stats.total).toLocaleString() },
-            { label: "Unique Types",   value: Object.keys(blockData?.paletteSummary ?? {}).length || stats.uniqueTypes },
-            { label: "Most Used",      value: stats.mostUsed.replace(/minecraft:/g, "").replace(/_/g, " ") },
+            { label: "Total Blocks", value: (blockData?.blockCount ?? stats.total).toLocaleString() },
+            { label: "Unique Types", value: Object.keys(blockData?.paletteSummary ?? {}).length || stats.uniqueTypes },
+            { label: "Most Used",    value: stats.mostUsed.replace(/minecraft:/g, "").replace(/_/g, " ") },
           ].map(({ label, value }) => (
             <div key={label} className="rounded-md border border-stone-700 bg-stone-800 px-3 py-2">
               <p className="text-stone-500 uppercase tracking-widest text-[10px]">{label}</p>

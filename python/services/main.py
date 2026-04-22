@@ -2,6 +2,7 @@ import asyncio
 import base64
 import binascii
 import platform
+import functools
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Literal
@@ -46,6 +47,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@functools.lru_cache(maxsize=16)
+def get_cached_matcher(palette_key: str) -> "BlockColorMatcher":
+    """Return a cached BlockColorMatcher for the given palette name."""
+    return BlockColorMatcher(palette=palette_key)
 
 
 def _get_schematics_dir() -> Path:

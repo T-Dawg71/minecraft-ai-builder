@@ -8,6 +8,7 @@ import ImportGuide from "@/components/ImportGuide";
 import VersionCompatibility, { MinecraftVersion } from "@/components/VersionCompatibility";
 import SkeletonLoader from "@/components/SkeletonLoader";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
+import { useBlockGridWorker } from "@/hooks/useBlockGridWorker";
 import { useState } from "react";
 import HistoryGallery from "@/components/HistoryGallery";
 import ImageEditor from "@/components/ImageEditor";
@@ -29,6 +30,8 @@ export default function Home() {
     updateSettings,
     setInput,
   } = useImageGeneration();
+
+  const { grid: workerGrid, isProcessing: isGridProcessing } = useBlockGridWorker(blockData);
 
   const [mcVersion, setMcVersion] = useState<MinecraftVersion>("1.21");
   const [editedImageBase64, setEditedImageBase64] = useState<string | null>(null);
@@ -89,16 +92,15 @@ export default function Home() {
           onEditedImageChange={setEditedImageBase64}
         />
 
-        {/* Skeleton while generating before first result */}
         {showSkeleton && <SkeletonLoader />}
 
-        {/* Comparison view — shown once we have an image or block data */}
         {!showSkeleton && showComparison && (
           <>
             <ComparisonView
               imageBase64={previewImage}
               blockData={blockData || null}
-              isConverting={isConverting}
+              materializedGrid={workerGrid}
+              isConverting={isConverting || isGridProcessing}
             />
             {blockData && (
               <ExportPanel
@@ -110,7 +112,6 @@ export default function Home() {
           </>
         )}
 
-        {/* Empty state */}
         {!showSkeleton && !showComparison && (
           <div className="bg-stone-800 rounded-lg border border-stone-700 p-8 min-h-[400px] flex items-center justify-center">
             <p className="text-stone-500 text-sm font-mono text-center">
@@ -120,7 +121,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* History gallery — full width below the two columns */}
       <div className="w-full mt-6">
         <HistoryGallery onRemix={handleRemix} />
       </div>

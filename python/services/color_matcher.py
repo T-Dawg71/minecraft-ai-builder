@@ -156,18 +156,30 @@ class BlockColorMatcher:
         Returns:
             List of block dicts for each input color
         """
-        # Convert all RGB values to LAB
-        lab_array = np.array([_rgb_to_lab(tuple(rgb)) for rgb in rgb_array])
+        results = [None] * len(rgb_array)
+        uncached_indices = []
+        uncached_rgbs = []
 
-        # Batch query the KD-Tree
-        distances, indices = self._kdtree.query(lab_array)
+        for i, rgb in enumerate(rgb_array):
+            cache_key = tuple(rgb)
+            if cache_key in self._cache:
+                results[i] = self._cache[cache_key]
+            else:
+                uncached_indices.append(i)
+                uncached_rgbs.append(rgb)
 
-        results = []
-        for i, (dist, idx) in enumerate(zip(distances, indices)):
-            results.append({
-                **self.blocks[idx],
-                "distance": float(dist),
-            })
+        if uncached_rgbs:
+            lab_array = np.array([_rgb_to_lab(tuple(rgb)) for rgb in uncached_rgbs])
+            distances, indices = self._kdtree.query(lab_array)
+
+            for i, (dist, idx) in enumerate(zip(distances, indices)):
+                result = {
+                    **self.blocks[idx],
+                    "distance": float(dist),
+                }
+                cache_key = tuple(uncached_rgbs[i])
+                self._cache[cache_key] = result
+                results[uncached_indices[i]] = result
 
         return results
 
@@ -196,7 +208,6 @@ if __name__ == "__main__":
     print(f"Loaded {matcher.palette_size} blocks")
     print()
 
-    # Test specific colors
     test_colors = [
         ((255, 0, 0), "Pure Red"),
         ((0, 255, 0), "Pure Green"),

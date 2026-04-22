@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { PipelineStep } from "@/components/PipelineStatus";
 import type { BlockGridData } from "@/components/BlockPreview";
 import type { ConversionSettingsData } from "@/components/ConversionSettings";
@@ -30,7 +30,25 @@ const makeInitial = (): GenerationState => ({
   settings: DEFAULT_SETTINGS,
 });
 
-// Translate raw HTTP/network errors into friendly messages
+async function compressImage(base64: string, maxWidth = 512, quality = 0.85): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(base64); return; }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const compressed = canvas.toDataURL("image/jpeg", quality);
+      resolve(compressed.split(",")[1]);
+    };
+    img.onerror = () => resolve(base64);
+    img.src = `data:image/png;base64,${base64}`;
+  });
+}
+
 function friendlyError(err: unknown, context: "image" | "convert"): string {
   const msg = err instanceof Error ? err.message : String(err);
 
@@ -52,12 +70,12 @@ function friendlyError(err: unknown, context: "image" | "convert"): string {
   if (msg.toLowerCase().includes("failed to fetch") || msg.toLowerCase().includes("networkerror")) {
     return "Cannot reach the server. Please check that the backend is running on port 8000.";
   }
-  // Fall back to the raw message if we don't recognise it
   return msg;
 }
 
 export function useImageGeneration() {
   const [state, setState] = useState<GenerationState>(makeInitial);
+  const isRunningRef = useRef(false);
 
   const setPartial = (patch: Partial<GenerationState>) =>
     setState((prev) => ({ ...prev, ...patch }));
@@ -131,7 +149,6 @@ export function useImageGeneration() {
 
         setPartial({ blockData, step: "done", isConverting: false, isLoading: false });
 
-        // --- Save to history ---
         try {
           await fetch("/api/history", {
             method: "POST",
@@ -143,7 +160,7 @@ export function useImageGeneration() {
             }),
           });
         } catch {
-          // History save failure is non-fatal — don't surface to user
+          // History save failure is non-fatal
         }
 
       } catch (err) {
@@ -153,6 +170,8 @@ export function useImageGeneration() {
           isLoading: false,
           error: friendlyError(err, "convert"),
         });
+      } finally {
+        isRunningRef.current = false;
       }
     },
     []
@@ -161,6 +180,8 @@ export function useImageGeneration() {
   const run = useCallback(
     async (input: string) => {
       if (!input.trim()) return;
+      if (isRunningRef.current) return;
+      isRunningRef.current = true;
 
       const activeSettings = state.settings;
       const promptToGenerate = input.trim();
@@ -176,7 +197,6 @@ export function useImageGeneration() {
         negativePrompt: negative,
       });
 
-      // --- Generate image ---
       let imageBase64 = "";
       try {
         const res = await fetch("/api/generate-image", {
@@ -191,6 +211,7 @@ export function useImageGeneration() {
         const data = await res.json();
         imageBase64 = data.image ?? data.imageBase64 ?? data.base64 ?? "";
         if (!imageBase64) throw new Error("No image data returned.");
+        imageBase64 = await compressImage(imageBase64);
         setPartial({ imageBase64 });
       } catch (err) {
         setPartial({
@@ -198,10 +219,10 @@ export function useImageGeneration() {
           isLoading: false,
           error: friendlyError(err, "image"),
         });
+        isRunningRef.current = false;
         return;
       }
 
-      // --- Convert to blocks ---
       await convertToBlocks(imageBase64, activeSettings, input, promptToGenerate);
     },
     [state.settings, convertToBlocks]
@@ -225,7 +246,6 @@ export function useImageGeneration() {
     if (state.input) run(state.input);
   }, [state.input, run]);
 
-  // Preserve the user's palette/settings across reset
   const reset = useCallback(() =>
     setState(prev => ({ ...makeInitial(), settings: prev.settings })),
   []);

@@ -51,8 +51,13 @@ def image_to_block_grid(
         A `BlockGrid` containing dimensions, 2D block mappings, and palette usage counts.
     """
     normalized_image = _ensure_rgb_image(image)
-    block_list = _normalize_palette(palette)
-    matcher = BlockColorMatcher(block_list=block_list)
+    if isinstance(palette, str):
+        from services.color_matcher import get_cached_matcher
+        matcher = get_cached_matcher(palette)
+    else:
+        block_list = _normalize_palette(palette)
+        matcher = BlockColorMatcher(block_list=block_list)
+
 
     pixels = np.array(normalized_image, dtype=np.uint8)
     height, width = pixels.shape[:2]

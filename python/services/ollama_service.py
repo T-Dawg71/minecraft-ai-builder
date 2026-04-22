@@ -4,8 +4,8 @@ Refines user descriptions into Stable Diffusion-optimized prompts
 using Llama 3 via the Ollama API.
 """
 
-import requests
-import time
+import aiohttp
+import asyncio
 import os
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
@@ -43,10 +43,6 @@ NEGATIVE RULES:
 
 
 def parse_refined_prompt(response: str) -> tuple[str, str]:
-    """
-    Parse Ollama's two-line response into (positive_prompt, negative_prompt).
-    Falls back gracefully if the format isn't followed exactly.
-    """
     positive = ""
     negative = "photograph, photo, realistic, shadows, gradients, shading, glow, photorealistic, texture detail, blur, noise"
 
@@ -57,29 +53,13 @@ def parse_refined_prompt(response: str) -> tuple[str, str]:
         elif line.lower().startswith("negative:"):
             negative = line[len("negative:"):].strip()
 
-    # Fallback: if Ollama ignored the format and returned a blob, use it as-is
     if not positive:
         positive = response.strip()
 
     return positive, negative
 
 
-def refine_prompt(user_input: str) -> tuple[str, str]:
-    """
-    Takes a raw user description and returns (positive_prompt, negative_prompt)
-    both optimized for Stable Diffusion with Minecraft block conversion in mind.
-
-    Args:
-        user_input: Raw description from the user (e.g., "a castle on a hill")
-
-    Returns:
-        Tuple of (positive_prompt, negative_prompt) strings.
-
-    Raises:
-        TimeoutError: If Ollama doesn't respond within TIMEOUT_SECONDS
-        ConnectionError: If Ollama API is unreachable
-        RuntimeError: If all retries are exhausted
-    """
+async def refine_prompt(user_input: str) -> tuple[str, str]:
     if not user_input or not user_input.strip():
         raise ValueError("User input cannot be empty")
 
@@ -91,59 +71,40 @@ def refine_prompt(user_input: str) -> tuple[str, str]:
         "stream": False,
     }
 
+    timeout = aiohttp.ClientTimeout(total=TIMEOUT_SECONDS)
     last_error = None
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            response = requests.post(url, json=payload, timeout=TIMEOUT_SECONDS)
-            response.raise_for_status()
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(url, json=payload) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    raw = data.get("response", "").strip()
 
-            data = response.json()
-            raw = data.get("response", "").strip()
+                    if not raw:
+                        raise RuntimeError("Ollama returned an empty response")
 
-            if not raw:
-                raise RuntimeError("Ollama returned an empty response")
+                    return parse_refined_prompt(raw)
 
-            return parse_refined_prompt(raw)
-
-        except requests.exceptions.Timeout:
+        except asyncio.TimeoutError:
             last_error = TimeoutError(
                 f"Ollama request timed out after {TIMEOUT_SECONDS}s (attempt {attempt}/{MAX_RETRIES})"
             )
-        except requests.exceptions.ConnectionError:
+        except aiohttp.ClientConnectionError:
             last_error = ConnectionError(
                 f"Cannot connect to Ollama at {OLLAMA_HOST}. Is it running? (attempt {attempt}/{MAX_RETRIES})"
             )
-        except requests.exceptions.HTTPError as e:
+        except aiohttp.ClientResponseError as e:
             last_error = RuntimeError(
-                f"Ollama API error: {e.response.status_code} (attempt {attempt}/{MAX_RETRIES})"
+                f"Ollama API error: {e.status} (attempt {attempt}/{MAX_RETRIES})"
             )
         except Exception as e:
             last_error = RuntimeError(
                 f"Unexpected error: {str(e)} (attempt {attempt}/{MAX_RETRIES})"
             )
 
-        # Exponential backoff: 1s, 2s, 4s
         if attempt < MAX_RETRIES:
-            wait_time = 2 ** (attempt - 1)
-            time.sleep(wait_time)
+            await asyncio.sleep(2 ** (attempt - 1))
 
     raise last_error
-
-
-# Quick test when running directly
-if __name__ == "__main__":
-    test_inputs = [
-        "a green heart",
-        "a castle on a hill",
-        "a red apple",
-    ]
-    for test_input in test_inputs:
-        print(f"\nOriginal:  {test_input}")
-        print(f"Refining...")
-        try:
-            positive, negative = refine_prompt(test_input)
-            print(f"Positive: {positive}")
-            print(f"Negative: {negative}")
-        except Exception as e:
-            print(f"Error: {e}")

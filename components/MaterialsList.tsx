@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
+import { useMemo, useState, memo } from "react";
 import { rgbToCssColor, type BlockGridData } from "@/components/BlockPreview";
 
 type SortKey = "quantity" | "name" | "color";
@@ -97,7 +96,7 @@ async function copyTextToClipboard(text: string) {
   textarea.remove();
 }
 
-export default function MaterialsList({ blockData }: MaterialsListProps) {
+function MaterialsList({ blockData }: MaterialsListProps) {
   const [sortKey, setSortKey] = useState<SortKey>("quantity");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
@@ -110,12 +109,7 @@ export default function MaterialsList({ blockData }: MaterialsListProps) {
     const uniqueTypes = baseRows.length;
     const estimatedStacks = totalBlocks / 64;
     const estimatedShulkers = estimatedStacks / 27;
-    return {
-      totalBlocks,
-      uniqueTypes,
-      estimatedStacks,
-      estimatedShulkers,
-    };
+    return { totalBlocks, uniqueTypes, estimatedStacks, estimatedShulkers };
   }, [baseRows]);
 
   const clipboardText = useMemo(() => {
@@ -129,7 +123,6 @@ export default function MaterialsList({ blockData }: MaterialsListProps) {
       `Estimated Stacks\t${totals.estimatedStacks.toFixed(2)}`,
       `Estimated Shulker Boxes\t${totals.estimatedShulkers.toFixed(2)}`,
     ];
-
     return [header, ...lines, "", ...summary].join("\n");
   }, [rows, totals]);
 
@@ -138,7 +131,6 @@ export default function MaterialsList({ blockData }: MaterialsListProps) {
       setSortDirection((direction) => (direction === "asc" ? "desc" : "asc"));
       return;
     }
-
     setSortKey(nextKey);
     setSortDirection(nextKey === "quantity" ? "desc" : "asc");
   }
@@ -174,10 +166,10 @@ export default function MaterialsList({ blockData }: MaterialsListProps) {
 
       <div className="grid gap-2 border-b border-mc-stone-300 bg-mc-stone-50 px-5 py-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Total Blocks", value: formatNumber(totals.totalBlocks) },
-          { label: "Unique Types", value: formatNumber(totals.uniqueTypes) },
-          { label: "Estimated Stacks", value: formatDecimal(totals.estimatedStacks) },
-          { label: "Shulker Boxes", value: formatDecimal(totals.estimatedShulkers) },
+          { label: "Total Blocks",      value: formatNumber(totals.totalBlocks) },
+          { label: "Unique Types",      value: formatNumber(totals.uniqueTypes) },
+          { label: "Estimated Stacks",  value: formatDecimal(totals.estimatedStacks) },
+          { label: "Shulker Boxes",     value: formatDecimal(totals.estimatedShulkers) },
         ].map((item) => (
           <div key={item.label} className="rounded-xl border border-mc-stone-300 bg-white px-3 py-3">
             <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-mc-stone-500">{item.label}</p>
@@ -231,3 +223,5 @@ export default function MaterialsList({ blockData }: MaterialsListProps) {
     </section>
   );
 }
+
+export default memo(MaterialsList);

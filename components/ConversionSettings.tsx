@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
-
+import { useCallback, useState, useEffect, memo } from "react";
 
 // ── Palette definitions ───────────────────────────────────────────────────────
 
@@ -229,7 +228,7 @@ export const DEFAULT_SETTINGS: ConversionSettingsData = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function ConversionSettings({
+function ConversionSettings({
   settings,
   onSettingsChange,
   onReconvert,
@@ -237,6 +236,7 @@ export default function ConversionSettings({
   hasBlockData,
   isConverting,
 }: ConversionSettingsProps) {
+
   const [depthInput, setDepthInput] = useState("");
 
     useEffect(() => {
@@ -374,3 +374,4 @@ export default function ConversionSettings({
     </div>
   );
 }
+export default memo(ConversionSettings);
