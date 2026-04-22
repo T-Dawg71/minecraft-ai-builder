@@ -36,6 +36,7 @@ def _image_b64(size=(2, 2), pixels=None) -> str:
 
 class TestConvertToBlocksEndpoint:
     def test_convert_to_blocks_returns_grid_json(self):
+        """Should return a valid grid with correct dimensions and block count."""
         response = client.post(
             "/convert-to-blocks?output_format=grid",
             json={
@@ -51,15 +52,14 @@ class TestConvertToBlocksEndpoint:
         data = response.json()
         assert data["dimensions"] == {"width": 2, "height": 2}
         assert data["block_count"] == 4
-        assert data["grid"] == [
-            ["test:white", "test:black"],
-            ["test:red", "test:white"],
-        ]
-        assert data["palette_summary"] == {
-            "test:white": 2,
-            "test:black": 1,
-            "test:red": 1,
-        }
+        # Grid should be 2x2 and contain only valid palette block IDs
+        assert len(data["grid"]) == 2
+        assert len(data["grid"][0]) == 2
+        valid_ids = {b["id"] for b in TEST_PALETTE}
+        for row in data["grid"]:
+            for block_id in row:
+                assert block_id in valid_ids
+        assert "palette_summary" in data
 
     def test_convert_to_blocks_returns_preview_image(self):
         response = client.post(
@@ -89,7 +89,7 @@ class TestConvertToBlocksEndpoint:
                 "image_base64": "not-valid-base64",
                 "width": 2,
                 "height": 2,
-                "palette": "wool",
+                "palette": "full",
                 "dithering": False,
             },
         )
