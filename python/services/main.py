@@ -326,7 +326,7 @@ async def generate_image_endpoint(request: GenerateImageRequest):
     width = request.width if request.width is not None else DEFAULT_WIDTH
     height = request.height if request.height is not None else DEFAULT_HEIGHT
     try:
-        image_bytes = generate_image(
+        image_bytes = await generate_image(
             request.prompt,
             negative_prompt=request.negative_prompt,
             width=width,
