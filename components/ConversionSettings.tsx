@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState, useEffect, memo } from "react";
+import { useCallback, useState, useEffect } from "react";
+
 
 // ── Palette definitions ───────────────────────────────────────────────────────
 
@@ -102,7 +103,20 @@ export const PRESETS: BlockPalette[] = [FULL_PALETTE];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+export type BuildSize = "small" | "medium" | "large";
 export type DepthMode = "flat" | "relief";
+
+const BUILD_SIZES: { key: BuildSize; label: string; grid: number }[] = [
+  { key: "small",  label: "Small",  grid: 32  },
+  { key: "medium", label: "Medium", grid: 64  },
+  { key: "large",  label: "Large",  grid: 128 },
+];
+
+function sizeFromGrid(w: number): BuildSize {
+  if (w <= 32) return "small";
+  if (w <= 64) return "medium";
+  return "large";
+}
 
 export interface ConversionConfig {
   gridWidth:     number;
@@ -137,14 +151,12 @@ interface SliderProps {
 }
 
 function Slider({ label, value, min, max, onChange }: SliderProps) {
-  // Local string state so the box can be fully cleared while typing
   const [inputVal, setInputVal] = useState("");
 
-    useEffect(() => {
-      setInputVal(String(value));
-    }, []);
+  useEffect(() => {
+    setInputVal(String(value));
+  }, []);
 
-  // Keep local string in sync when slider moves
   const handleSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
     const n = +e.target.value;
     setInputVal(String(n));
@@ -153,14 +165,13 @@ function Slider({ label, value, min, max, onChange }: SliderProps) {
 
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
-    setInputVal(raw); // allow empty / partial input while typing
-    if (raw === "" || raw === "-") return; // don't commit yet
+    setInputVal(raw);
+    if (raw === "" || raw === "-") return;
     const n = parseInt(raw, 10);
     if (!isNaN(n)) onChange(Math.min(max, Math.max(min, n)));
   };
 
   const handleBlur = () => {
-    // On blur: if empty or invalid, reset to current value (treat blank as 0)
     const n = parseInt(inputVal, 10);
     if (isNaN(n) || inputVal === "" || inputVal === "-") {
       setInputVal("0");
@@ -228,7 +239,7 @@ export const DEFAULT_SETTINGS: ConversionSettingsData = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-function ConversionSettings({
+export default function ConversionSettings({
   settings,
   onSettingsChange,
   onReconvert,
@@ -236,12 +247,11 @@ function ConversionSettings({
   hasBlockData,
   isConverting,
 }: ConversionSettingsProps) {
-
   const [depthInput, setDepthInput] = useState("");
 
-    useEffect(() => {
-      setDepthInput(String(settings.depth));
-    }, []);
+  useEffect(() => {
+    setDepthInput(String(settings.depth));
+  }, []);
 
   const patch = useCallback(
     (p: Partial<ConversionSettingsData>) => onSettingsChange({ ...settings, ...p }),
@@ -268,8 +278,31 @@ function ConversionSettings({
     }
   };
 
+  const currentSize = sizeFromGrid(settings.gridWidth);
+
   return (
     <div className="flex flex-col gap-4 w-full font-mono text-sm rounded-md border-2 border-mc-stone-300 bg-mc-stone-100 p-4">
+
+      {/* ── Build Size ── */}
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-mc-stone-500 uppercase tracking-widest">Build Size</span>
+        <div className="flex gap-2">
+          {BUILD_SIZES.map(({ key, label, grid }) => (
+            <button
+              key={key}
+              onClick={() => patch({ gridWidth: grid, gridHeight: grid })}
+              className={`flex-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${
+                currentSize === key
+                  ? "bg-mc-grass-500 border-mc-grass-500 text-white"
+                  : "border-mc-stone-300 hover:bg-mc-stone-200 text-mc-stone-800"
+              }`}
+            >
+              <span className="block">{label}</span>
+              <span className="block text-[10px] font-normal opacity-70">{grid}×{grid}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* ── Dithering ── */}
       <div className="flex items-center justify-between">
@@ -374,4 +407,3 @@ function ConversionSettings({
     </div>
   );
 }
-export default memo(ConversionSettings);
